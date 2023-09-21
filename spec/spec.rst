@@ -2191,3 +2191,30 @@ Notes:
 When checking Python 2.7 code, type checkers should treat the ``int`` and
 ``long`` types as equivalent. For parameters typed as ``Text``, arguments of
 type ``str`` as well as ``unicode`` should be acceptable.
+
+.. _mypy:
+   http://mypy-lang.org
+
+.. _gvr-artima:
+   https://www.artima.com/weblogs/viewpost.jsp?thread=85551
+
+.. _wiki-variance:
+   https://en.wikipedia.org/wiki/Covariance_and_contravariance_%28computer_science%29
+
+.. _typeshed:
+   https://github.com/python/typeshed
+
+.. _roberge:
+   https://aroberge.blogspot.com/2015/01/type-hinting-in-python-focus-on.html
+
+.. _github:
+   https://github.com/python/typing
+
+.. _issues:
+   https://github.com/python/typing/issues
+
+.. _peps:
+   https://hg.python.org/peps/file/tip/pep-0484.txt
+
+.. _importdocs:
+   https://docs.python.org/3/reference/import.html#submodules
