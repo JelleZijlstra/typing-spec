@@ -2426,68 +2426,186 @@ parameter of the generic class ``typing.IO`` is constrained (only
 
   class IO(Generic[AnyStr]): ...
 
-Storing and distributing stub files
------------------------------------
-
-The easiest form of stub file storage and distribution is to put them
-alongside Python modules in the same directory.  This makes them easy to
-find by both programmers and the tools.  However, since package
-maintainers are free not to add type hinting to their packages,
-third-party stubs installable by ``pip`` from PyPI are also supported.
-In this case we have to consider three issues: naming, versioning,
-installation path.
-
-This PEP does not provide a recommendation on a naming scheme that
-should be used for third-party stub file packages.  Discoverability will
-hopefully be based on package popularity, like with Django packages for
-example.
-
-Third-party stubs have to be versioned using the lowest version of the
-source package that is compatible.  Example: FooPackage has versions
-1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2.  There are API changes in versions
-1.1, 2.0 and 2.2.  The stub file package maintainer is free to release
-stubs for all versions but at least 1.0, 1.1, 2.0 and 2.2 are needed
-to enable the end user type check all versions.  This is because the
-user knows that the closest *lower or equal* version of stubs is
-compatible.  In the provided example, for FooPackage 1.3 the user would
-choose stubs version 1.1.
-
-Note that if the user decides to use the "latest" available source
-package, using the "latest" stub files should generally also work if
-they're updated often.
-
-Third-party stub packages can use any location for stub storage.  Type
-checkers should search for them using PYTHONPATH.  A default fallback
-directory that is always checked is ``shared/typehints/pythonX.Y/`` (for
-some PythonX.Y as determined by the type checker, not just the installed
-version).  Since there can only be one package installed for a given Python
-version per environment, no additional versioning is performed under that
-directory (just like bare directory installs by ``pip`` in site-packages).
-Stub file package authors might use the following snippet in ``setup.py``::
-
-  ...
-  data_files=[
-      (
-          'shared/typehints/python{}.{}'.format(*sys.version_info[:2]),
-          pathlib.Path(SRC_PATH).glob('**/*.pyi'),
-      ),
-  ],
-  ...
-
-(*UPDATE:* As of June 2018 the recommended way to distribute type
-hints for third-party packages has changed -- in addition to typeshed
-(see the next section) there is now a standard for distributing type
-hints, :pep:`561`. It supports separately installable packages containing
-stubs, stub files included in the same distribution as the executable
-code of a package, and inline type hints, the latter two options
-enabled by including a file named ``py.typed`` in the package.)
-
 The Typeshed Repo
 -----------------
 
 There is a `shared repository <typeshed_>`_ where useful stubs are being
 collected.  Policies regarding the stubs collected here are
 decided separately and reported in the repo's documentation.
+
+
+Storing and distributing types for library packages
+====================================================
+
+There are several motivations and methods of supporting typing in a package.
+This specification recognizes three types of packages that users of typing wish to
+create:
+
+1. The package maintainer would like to add type information inline.
+
+2. The package maintainer would like to add type information via stubs.
+
+3. A third party or package maintainer would like to share stub files for
+   a package, but the maintainer does not want to include them in the source
+   of the package.
+
+This specification aims to support all three scenarios and make them simple to add to
+packaging and deployment.
+
+The two major parts of this specification are the packaging specifications
+and the resolution order for resolving module type information.
+
+
+Packaging Type Information
+--------------------------
+
+In order to make packaging and distributing type information as simple and
+easy as possible, packaging and distribution is done through existing
+frameworks.
+
+Package maintainers who wish to support type checking of their code MUST add
+a marker file named ``py.typed`` to their package supporting typing. This marker applies
+recursively: if a top-level package includes it, all its sub-packages MUST support
+type checking as well. To have this file installed with the package,
+maintainers can use existing packaging options such as ``package_data`` in
+distutils, shown below.
+
+Distutils option example::
+
+    setup(
+        ...,
+        package_data = {
+            'foopkg': ['py.typed'],
+        },
+        ...,
+        )
+
+For namespace packages (see :pep:`420`), the ``py.typed`` file should be in the
+submodules of the namespace, to avoid conflicts and for clarity.
+
+This specification does not support distributing typing information as part of
+module-only distributions or single-file modules within namespace packages.
+
+The single-file module should be refactored into a package
+and indicate that the package supports typing as described
+above.
+
+Stub-only Packages
+^^^^^^^^^^^^^^^^^^
+
+For package maintainers wishing to ship stub files containing all of their
+type information, it is preferred that the ``*.pyi`` stubs are alongside the
+corresponding ``*.py`` files. However, the stubs can also be put in a separate
+package and distributed separately. Third parties can also find this method
+useful if they wish to distribute stub files. The name of the stub package
+MUST follow the scheme ``foopkg-stubs`` for type stubs for the package named
+``foopkg``. Note that for stub-only packages adding a ``py.typed`` marker is not
+needed since the name ``*-stubs`` is enough to indicate it is a source of typing
+information.
+
+Third parties seeking to distribute stub files are encouraged to contact the
+maintainer of the package about distribution alongside the package. If the
+maintainer does not wish to maintain or package stub files or type information
+inline, then a third party stub-only package can be created.
+
+In addition, stub-only distributions SHOULD indicate which version(s)
+of the runtime package are supported by indicating the runtime distribution's
+version(s) through normal dependency data. For example, the
+stub package ``flyingcircus-stubs`` can indicate the versions of the
+runtime ``flyingcircus`` distribution it supports through ``install_requires``
+in distutils-based tools, or the equivalent in other packaging tools. Note that
+in pip 9.0, if you update ``flyingcircus-stubs``, it will update
+``flyingcircus``. In pip 9.0, you can use the
+``--upgrade-strategy=only-if-needed`` flag. In pip 10.0 this is the default
+behavior.
+
+For namespace packages (see :pep:`420`), stub-only packages should
+use the ``-stubs`` suffix on only the root namespace package.
+All stub-only namespace packages should omit ``__init__.pyi`` files. ``py.typed``
+marker files are not necessary for stub-only packages, but similarly
+to packages with inline types, if used, they should be in submodules of the namespace to
+avoid conflicts and for clarity.
+
+For example, if the ``pentagon`` and ``hexagon`` are separate distributions
+installing within the namespace package ``shapes.polygons``
+The corresponding types-only distributions should produce packages
+laid out as follows::
+
+    shapes-stubs
+    └── polygons
+        └── pentagon
+            └── __init__.pyi
+
+    shapes-stubs
+    └── polygons
+        └── hexagon
+            └── __init__.pyi
+
+.. _mro:
+
+Type Checker Module Resolution Order
+------------------------------------
+
+The following is the order in which type checkers supporting this specification SHOULD
+resolve modules containing type information:
+
+
+1. Stubs or Python source manually put in the beginning of the path. Type
+   checkers SHOULD provide this to allow the user complete control of which
+   stubs to use, and to patch broken stubs/inline types from packages.
+   In mypy the ``$MYPYPATH`` environment variable can be used for this.
+
+2. User code - the files the type checker is running on.
+
+3. Stub packages - these packages SHOULD supersede any installed inline
+   package. They can be found at ``foopkg-stubs`` for package ``foopkg``.
+
+4. Packages with a ``py.typed`` marker file - if there is nothing overriding
+   the installed package, *and* it opts into type checking, the types
+   bundled with the package SHOULD be used (be they in ``.pyi`` type
+   stub files or inline in ``.py`` files).
+
+5. Typeshed (if used) - Provides the stdlib types and several third party
+   libraries.
+
+If typecheckers identify a stub-only namespace package without the desired module
+in step 3, they should continue to step 4/5. Typecheckers should identify namespace packages
+by the absence of ``__init__.pyi``.  This allows different subpackages to
+independently opt for inline vs stub-only.
+
+Type checkers that check a different Python version than the version they run
+on MUST find the type information in the ``site-packages``/``dist-packages``
+of that Python version. This can be queried e.g.
+``pythonX.Y -c 'import site; print(site.getsitepackages())'``. It is also recommended
+that the type checker allow for the user to point to a particular Python
+binary, in case it is not in the path.
+
+
+Partial Stub Packages
+---------------------
+
+Many stub packages will only have part of the type interface for libraries
+completed, especially initially. For the benefit of type checking and code
+editors, packages can be "partial". This means modules not found in the stub
+package SHOULD be searched for in parts four and five of the module resolution
+order above, namely inline packages and typeshed.
+
+Type checkers should merge the stub package and runtime package or typeshed
+directories. This can be thought of as the functional equivalent of copying the
+stub package into the same directory as the corresponding runtime package or
+typeshed folder and type checking the combined directory structure. Thus type
+checkers MUST maintain the normal resolution order of checking ``*.pyi`` before
+``*.py`` files.
+
+If a stub package distribution is partial it MUST include ``partial\n`` in a
+``py.typed`` file.  For stub-packages distributing within a namespace
+package (see :pep:`420`), the ``py.typed`` file should be in the
+submodules of the namespace.
+
+Type checkers should treat namespace packages within stub-packages as
+incomplete since multiple distributions may populate them.
+Regular packages within namespace packages in stub-package distributions
+are considered complete unless a ``py.typed`` with ``partial\n`` is included.
 
 
 The ``typing`` Module
@@ -2678,6 +2796,30 @@ Types related to regular expressions and the ``re`` module:
 
 * Match and Pattern, types of ``re.match()`` and ``re.compile()``
   results (generic over ``AnyStr``)
+
+Definition of Terms
+===================
+
+This section defines a few terms that may be used elsewhere in the specification.
+
+The definition of "MAY", "MUST", and "SHOULD", and "SHOULD NOT" are
+to be interpreted as described in :rfc:`2119`.
+
+"inline" - the types are part of the runtime code using :pep:`526` and
+:pep:`3107` syntax (the filename ends in ``.py``).
+
+"stubs" - files containing only type information, empty of runtime code
+(the filename ends in ``.pyi``).
+
+"Distributions" are the packaged files which are used to publish and distribute
+a release. (:pep:`426`)
+
+"Module" a file containing Python runtime code or stubbed type information.
+
+"Package" a directory or directories that namespace Python modules.
+(Note the distinction between packages and distributions.  While most
+distributions are named after the one package they install, some
+distributions install multiple packages.)
 
 
 Syntax alternatives
