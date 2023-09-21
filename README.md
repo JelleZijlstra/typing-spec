@@ -4,6 +4,8 @@ This is a draft specification for the Python type system. It accompanies
 a [proposal](https://discuss.python.org/t/proposed-new-typing-governance-process/34244)
 to create a Typing Council that has the authority to create and maintain a spec.
 
+The spec itself is in a separate file: [spec/spec.rst](./spec/spec.rst).
+
 I am creating the spec by collating the [typing PEPs](https://peps.python.org/topic/typing/),
 essentially copy-pasting their "Specification" sections and editing them only to the
 extent necessary to keep the document coherent.
