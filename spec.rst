@@ -16,7 +16,7 @@ refactoring.
 Non-goals
 ---------
 
-While the proposed typing module will contain some building blocks for
+While the typing module contains some building blocks for
 runtime type checking -- in particular the ``get_type_hints()``
 function -- third party packages would have to be developed to
 implement specific runtime type checking functionality, for example
@@ -24,7 +24,7 @@ using decorators or metaclasses.  Using type hints for performance
 optimizations is left as an exercise for the reader.
 
 It should also be emphasized that **Python will remain a dynamically
-typed language, and the authors have no desire to ever make type hints
+typed language, and there is no desire to ever make type hints
 mandatory, even by convention.**
 
 
@@ -113,10 +113,6 @@ below may be used: ``None``, ``Any``, ``Union``, ``Tuple``,
 ``Callable``, all ABCs and stand-ins for concrete classes exported
 from ``typing`` (e.g. ``Sequence`` and ``Dict``), type variables, and
 type aliases.
-
-All newly introduced names used to support features described in
-following sections (such as ``Any`` and ``Union``) are available in
-the ``typing`` module.
 
 
 Using None
@@ -219,7 +215,7 @@ elements.  Example::
 
   def notify_by_email(employees: Set[Employee], overrides: Mapping[str, str]) -> None: ...
 
-Generics can be parameterized by using a new factory available in
+Generics can be parameterized by using a factory available in
 ``typing`` called ``TypeVar``.  Example::
 
   from typing import Sequence, TypeVar
@@ -768,25 +764,16 @@ while the following is prohibited::
       ...
 
 
-The numeric tower
------------------
+Special cases for subtyping
+---------------------------
 
-:pep:`3141` defines Python's numeric tower, and the stdlib module
-``numbers`` implements the corresponding ABCs (``Number``,
-``Complex``, ``Real``, ``Rational`` and ``Integral``).  There are some
-issues with these ABCs, but the built-in concrete numeric classes
-``complex``, ``float`` and ``int`` are ubiquitous (especially the
-latter two :-).
-
-Rather than requiring that users write ``import numbers`` and then use
-``numbers.Float`` etc., this PEP proposes a straightforward shortcut
-that is almost as effective: when an argument is annotated as having
+Python's numeric types ``complex``, ``float`` and ``int`` are not
+subtypes of each other, but to support common use cases, the type
+system contains a straightforward shortcut:
+when an argument is annotated as having
 type ``float``, an argument of type ``int`` is acceptable; similar,
 for an argument annotated as having type ``complex``, arguments of
-type ``float`` or ``int`` are acceptable.  This does not handle
-classes implementing the corresponding ABCs or the
-``fractions.Fraction`` class, but we believe those use cases are
-exceedingly rare.
+type ``float`` or ``int`` are acceptable.
 
 
 Forward references
@@ -876,7 +863,7 @@ Union types
 -----------
 
 Since accepting a small, limited set of expected types for a single
-argument is common, there is a new special factory called ``Union``.
+argument is common, there is a special factory called ``Union``.
 Example::
 
   from typing import Union
@@ -904,7 +891,7 @@ for example, the above is equivalent to::
 
   def handle_employee(e: Optional[Employee]) -> None: ...
 
-A past version of this PEP allowed type checkers to assume an optional
+A past version of this specification allowed type checkers to assume an optional
 type when the default value is ``None``, as in this code::
 
   def handle_employee(e: Employee = None): ...
@@ -1142,9 +1129,7 @@ A type checker ought to flag violations of such assumptions, but by
 default constructor calls that match the constructor signature in the
 indicated base class (``User`` in the example above) should be
 allowed.  A program containing a complex or extensible class hierarchy
-might also handle this by using a factory class method.  A future
-revision of this PEP may introduce better ways of dealing with these
-concerns.
+might also handle this by using a factory class method.
 
 When ``Type`` is parameterized it requires exactly one parameter.
 Plain ``Type`` without brackets is equivalent to ``Type[Any]`` and
@@ -1369,18 +1354,13 @@ hinting, you can use one or more of the following:
 
 For more details see later sections.
 
-In order for maximal compatibility with offline type checking it may
-eventually be a good idea to change interfaces that rely on annotations
-to switch to a different mechanism, for example a decorator.  In Python
-3.5 there is no pressure to do this, however.  See also the longer
-discussion under `Rejected alternatives`_ below.
-
 
 Type comments
 =============
 
 No first-class syntax support for explicitly marking variables as being
-of a specific type is added by this PEP.  To help with type inference in
+of a specific type existed when the type system was first designed.
+To help with type inference in
 complex cases, a comment of the following format may be used::
 
   x = []                # type: List[Employee]
@@ -1720,10 +1700,9 @@ and ``concat2`` in this stub file are equivalent::
   def concat2(x: bytes, y: bytes) -> bytes: ...
 
 Some functions, such as ``map`` or ``bytes.__getitem__`` above, can't
-be represented precisely using type variables.  However, unlike
-``@overload``, type variables can also be used outside stub files.  We
+be represented precisely using type variables. We
 recommend that ``@overload`` is only used in cases where a type
-variable is not sufficient, due to its special stub-only status.
+variable is not sufficient.
 
 Another important difference between type variables such as ``AnyStr``
 and using ``@overload`` is that the prior can also be used to define
@@ -1793,27 +1772,16 @@ The Typeshed Repo
 -----------------
 
 There is a `shared repository <typeshed_>`_ where useful stubs are being
-collected.  Policies regarding the stubs collected here will be
+collected.  Policies regarding the stubs collected here are
 decided separately and reported in the repo's documentation.
-Note that stubs for a given package will not be included here
-if the package owners have specifically requested that they be omitted.
-
-
-Exceptions
-==========
-
-No syntax for listing explicitly raised exceptions is proposed.
-Currently the only known use case for this feature is documentational,
-in which case the recommendation is to put this information in a
-docstring.
 
 
 The ``typing`` Module
 =====================
 
 To open the usage of static type checking to Python 3.5 as well as older
-versions, a uniform namespace is required.  For this purpose, a new
-module in the standard library is introduced called ``typing``.
+versions, a uniform namespace is required.  For this purpose, the
+standard library contains the ``typing`` module.
 
 It defines the fundamental building blocks for constructing types
 (e.g. ``Any``), types representing generic variants of builtin
