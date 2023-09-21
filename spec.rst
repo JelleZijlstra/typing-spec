@@ -1966,8 +1966,21 @@ Types related to regular expressions and the ``re`` module:
   results (generic over ``AnyStr``)
 
 
-Suggested syntax for Python 2.7 and straddling code
-===================================================
+Syntax alternatives
+===================
+
+Over the course of the development of the Python type system, several
+changes were made to the Python grammar and standard library to make it
+easier to use the type system. This document aims to use the more
+modern syntax in all examples, but type checkers should generally support
+the older alternatives and treat them as equivalent.
+
+This section lists all of these cases.
+
+.. TODO: add 526 (variable annotations), 585 (builtin generics), 604 (unions), 646 (Unpack), 695 (type parameters)
+
+Type comments on function definitions
+=====================================
 
 Some tools may want to support type annotations in code that must be
 compatible with Python 2.7.  For this purpose this PEP has a suggested
