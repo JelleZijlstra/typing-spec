@@ -148,7 +148,7 @@ alias::
         return sum(x*y for x, y in v)
     def dilate(v: Vector[T], scale: T) -> Vector[T]:
         return ((x * scale, y * scale) for x, y in v)
-    vec = []  # type: Vector[float]
+    vec: Vector[float] = []
 
 
 This is equivalent to::
@@ -161,7 +161,7 @@ This is equivalent to::
         return sum(x*y for x, y in v)
     def dilate(v: Iterable[Tuple[T, T]], scale: T) -> Iterable[Tuple[T, T]]:
         return ((x * scale, y * scale) for x, y in v)
-    vec = []  # type: Iterable[Tuple[float, float]]
+    vec: Iterable[Tuple[float, float]] = []
 
 
 Callable
@@ -415,7 +415,7 @@ However, there are some special cases in the static typechecking context:
         def meth_1(self, x: T) -> T: ...  # T here
         def meth_2(self, x: T) -> T: ...  # and here are always the same
 
-    a = MyClass()  # type: MyClass[int]
+    a: MyClass[int] = MyClass()
     a.meth_1(1)    # OK
     a.meth_2('a')  # This is an error!
 
@@ -429,7 +429,7 @@ However, there are some special cases in the static typechecking context:
         def method(self, x: T, y: S) -> S:
             ...
 
-    x = Foo()               # type: Foo[int]
+    x: Foo[int] = Foo()
     y = x.method(0, "abc")  # inferred type of y is str
 
 * Unbound type variables should not appear in the bodies of generic functions,
@@ -440,13 +440,13 @@ However, there are some special cases in the static typechecking context:
 
     def a_fun(x: T) -> None:
         # this is OK
-        y = []  # type: List[T]
+        y: List[T] = []
         # but below is an error!
-        y = []  # type: List[S]
+        y: List[S] = []
 
     class Bar(Generic[T]):
         # this is also an error
-        an_attr = []  # type: List[S]
+        an_attr: List[S] = []
 
         def do_something(x: S) -> S:  # this is OK though
             ...
@@ -459,7 +459,7 @@ However, there are some special cases in the static typechecking context:
     def a_fun(x: T) -> None:
 
         # This is OK
-        a_list = []  # type: List[T]
+        a_list: List[T] = []
         ...
 
         # This is however illegal
@@ -477,11 +477,11 @@ However, there are some special cases in the static typechecking context:
         class Bad(Iterable[T]):       # Error
             ...
         class AlsoBad:
-            x = None  # type: List[T] # Also an error
+            x: List[T]  # Also an error
 
         class Inner(Iterable[S]):     # OK
             ...
-        attr = None  # type: Inner[T] # Also OK
+        attr: Inner[T]  # Also OK
 
 
 Instantiating generic classes and type erasure
@@ -510,7 +510,7 @@ argument(s) is substituted.  Otherwise, ``Any`` is assumed.  Example::
   T = TypeVar('T')
 
   class Node(Generic[T]):
-      x = None  # type: T # Instance attribute (see below)
+      x: T # Instance attribute (see below)
       def __init__(self, label: T = None) -> None:
           ...
 
@@ -523,8 +523,8 @@ specific, you can use a type comment (see below) to force the type of
 the variable, e.g.::
 
   # (continued from previous example)
-  a = Node()  # type: Node[int]
-  b = Node()  # type: Node[str]
+  a: Node[int] = Node()
+  b: Node[str] = Node()
 
 Alternatively, you can instantiate a specific concrete type, e.g.::
 
@@ -567,7 +567,7 @@ Note that one should not confuse static types and runtime classes.
 The type is still erased in this case and the above expression is
 just a shorthand for::
 
-  data = collections.defaultdict()  # type: DefaultDict[int, bytes]
+  data: DefaultDict[int, bytes] = collections.defaultdict()
 
 It is not recommended to use the subscripted class (e.g. ``Node[int]``)
 directly in an expression -- using a type alias (e.g. ``IntNode = Node[int]``)
@@ -726,7 +726,7 @@ container class::
       for emp in emps:
           ...
 
-  mgrs = ImmutableList([Manager()])  # type: ImmutableList[Manager]
+  mgrs: ImmutableList[Manager] = ImmutableList([Manager()])
   dump_employees(mgrs)  # OK
 
 The read-only collection classes in ``typing`` are all declared
@@ -1046,7 +1046,7 @@ and considered an error if it appears in other positions::
   # All of the following are errors
   def bad1(x: NoReturn) -> int:
       ...
-  bad2 = None  # type: NoReturn
+  bad2: NoReturn = None
   def bad3() -> List[NoReturn]:
       ...
 
@@ -1227,12 +1227,12 @@ situations the ``typing`` module defines a constant,
       import expensive_mod
 
   def a_func(arg: 'expensive_mod.SomeClass') -> None:
-      a_var = arg  # type: expensive_mod.SomeClass
+      a_var: expensive_mod.SomeClass = arg
       ...
 
 (Note that the type annotation must be enclosed in quotes, making it a
 "forward reference", to hide the ``expensive_mod`` reference from the
-interpreter runtime.  In the ``# type`` comment no quotes are needed.)
+interpreter runtime.  In the variable annotation no quotes are needed.)
 
 This approach may also be useful to handle import cycles.
 
@@ -1305,7 +1305,7 @@ type of ``await`` expression, not to the coroutine type::
       return 'spam'
 
   async def foo() -> None:
-      bar = await spam(42)  # type: str
+      bar = await spam(42)  # type is str
 
 The ``typing.py`` module provides a generic version of ABC
 ``collections.abc.Coroutine`` to specify awaitables that also support
@@ -1314,11 +1314,11 @@ correspond to those of ``Generator``, namely ``Coroutine[T_co, T_contra, V_co]``
 for example::
 
   from typing import List, Coroutine
-  c = None  # type: Coroutine[List[str], str, int]
+  c: Coroutine[List[str], str, int]
   ...
-  x = c.send('hi')  # type: List[str]
+  x = c.send('hi')  # type is List[str]
   async def bar() -> None:
-      x = await c  # type: int
+      x = await c  # type is int
 
 The module also provides generic ABCs ``Awaitable``,
 ``AsyncIterable``, and ``AsyncIterator`` for situations where more precise
@@ -1355,57 +1355,11 @@ hinting, you can use one or more of the following:
 For more details see later sections.
 
 
-Type comments
-=============
+``# type: ignore`` comments
+---------------------------
 
-No first-class syntax support for explicitly marking variables as being
-of a specific type existed when the type system was first designed.
-To help with type inference in
-complex cases, a comment of the following format may be used::
-
-  x = []                # type: List[Employee]
-  x, y, z = [], [], []  # type: List[int], List[int], List[str]
-  x, y, z = [], [], []  # type: (List[int], List[int], List[str])
-  a, b, *c = range(5)   # type: float, float, List[float]
-  x = [1, 2]            # type: List[int]
-
-Type comments should be put on the last line of the statement that
-contains the variable definition. They can also be placed on
-``with`` statements and ``for`` statements, right after the colon.
-
-Examples of type comments on ``with`` and ``for`` statements::
-
-  with frobnicate() as foo:  # type: int
-      # Here foo is an int
-      ...
-
-  for x, y in points:  # type: float, float
-      # Here x and y are floats
-      ...
-
-In stubs it may be useful to declare the existence of a variable
-without giving it an initial value.  This can be done using :pep:`526`
-variable annotation syntax::
-
-  from typing import IO
-
-  stream: IO[str]
-
-The above syntax is acceptable in stubs for all versions of Python.
-However, in non-stub code for versions of Python 3.5 and earlier
-there is a special case::
-
-  from typing import IO
-
-  stream = None  # type: IO[str]
-
-Type checkers should not complain about this (despite the value
-``None`` not matching the given type), nor should they change the
-inferred type to ``Optional[...]`` (despite the rule that does this
-for annotated arguments with a default value of ``None``).  The
-assumption here is that other code will ensure that the variable is
-given a value of the proper type, and all uses can assume that the
-variable has the given type.
+The special comment ``# type: ignore`` is used to silence type checker
+errors.
 
 The ``# type: ignore`` comment should be put on the line that the
 error refers to::
@@ -1978,6 +1932,73 @@ the older alternatives and treat them as equivalent.
 This section lists all of these cases.
 
 .. TODO: add 526 (variable annotations), 585 (builtin generics), 604 (unions), 646 (Unpack), 695 (type parameters)
+
+Type comments
+-------------
+
+No first-class syntax support for explicitly marking variables as being
+of a specific type existed when the type system was first designed.
+To help with type inference in
+complex cases, a comment of the following format may be used::
+
+  x = []                # type: List[Employee]
+  x, y, z = [], [], []  # type: List[int], List[int], List[str]
+  x, y, z = [], [], []  # type: (List[int], List[int], List[str])
+  a, b, *c = range(5)   # type: float, float, List[float]
+  x = [1, 2]            # type: List[int]
+
+Type comments should be put on the last line of the statement that
+contains the variable definition. 
+
+These should be treated as equivalent to annotating the variables
+using :pep:`526` variable annotations::
+
+  x: List[Employee] = []
+  x: List[int]
+  y: List[int]
+  z: List[str]
+  x, y, z = [], [], []
+  a: float
+  b: float
+  c: List[float]
+  a, b, *c = range(5)
+  x: List[int] = [1, 2]
+
+Type comments can also be placed on
+``with`` statements and ``for`` statements, right after the colon.
+
+Examples of type comments on ``with`` and ``for`` statements::
+
+  with frobnicate() as foo:  # type: int
+      # Here foo is an int
+      ...
+
+  for x, y in points:  # type: float, float
+      # Here x and y are floats
+      ...
+
+In stubs it may be useful to declare the existence of a variable
+without giving it an initial value.  This can be done using :pep:`526`
+variable annotation syntax::
+
+  from typing import IO
+
+  stream: IO[str]
+
+The above syntax is acceptable in stubs for all versions of Python.
+However, in non-stub code for versions of Python 3.5 and earlier
+there is a special case::
+
+  from typing import IO
+
+  stream = None  # type: IO[str]
+
+Type checkers should not complain about this (despite the value
+``None`` not matching the given type), nor should they change the
+inferred type to ``Optional[...]``.  The
+assumption here is that other code will ensure that the variable is
+given a value of the proper type, and all uses can assume that the
+variable has the given type.
 
 Type comments on function definitions
 -------------------------------------
