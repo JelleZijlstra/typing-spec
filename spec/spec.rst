@@ -1268,22 +1268,6 @@ In such cases the default value may be specified as a literal
 ellipsis, i.e. the above example is literally what you would write.
 
 
-Positional-only arguments
--------------------------
-
-Some functions are designed to take their arguments only positionally,
-and expect their callers never to use the argument's name to provide
-that argument by keyword. All arguments with names beginning with
-``__`` are assumed to be positional-only, except if their names also
-end with ``__``::
-
-  def quux(__x: int, __y__: int = 0) -> None: ...
-
-  quux(3, __y__=1)  # This call is fine.
-
-  quux(__x=3)  # This call is an error.
-
-
 Annotating generator functions and coroutines
 ---------------------------------------------
 
@@ -3012,6 +2996,28 @@ Notes:
 When checking Python 2.7 code, type checkers should treat the ``int`` and
 ``long`` types as equivalent. For parameters typed as ``Text``, arguments of
 type ``str`` as well as ``unicode`` should be acceptable.
+
+
+Positional-only arguments
+-------------------------
+
+Some functions are designed to take their arguments only positionally,
+and expect their callers never to use the argument's name to provide
+that argument by keyword. Before Python 3.8 (:pep:`570`), Python did
+not provide a way to declare positional-only arguments.
+
+To support positional-only arguments on older Python versions, type
+checkers support the following special case:
+all arguments with names beginning with
+``__`` are assumed to be positional-only, except if their names also
+end with ``__``::
+
+  def quux(__x: int, __y__: int = 0) -> None: ...
+
+  quux(3, __y__=1)  # This call is fine.
+
+  quux(__x=3)  # This call is an error.
+
 
 .. _mypy:
    http://mypy-lang.org
