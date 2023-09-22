@@ -4792,14 +4792,14 @@ User-defined type guards can be generic functions, as shown in this example:
 
     _T = TypeVar("_T")
 
-    def is_two_element_tuple(val: Tuple[_T, ...]) -> TypeGuard[Tuple[_T, _T]]:
+    def is_two_element_tuple(val: Tuple[_T, ...]) -> TypeGuard[tuple[_T, _T]]:
         return len(val) == 2
 
-    def func(names: Tuple[str, ...]):
+    def func(names: tuple[str, ...]):
         if is_two_element_tuple(names):
-            reveal_type(names)  # Tuple[str, str]
+            reveal_type(names)  # tuple[str, str]
         else:
-            reveal_type(names)  # Tuple[str, ...]
+            reveal_type(names)  # tuple[str, ...]
 
 
 Type checkers should assume that type narrowing should be applied to the
@@ -4816,14 +4816,14 @@ than one argument:
 
 ::
 
-    def is_str_list(val: List[object], allow_empty: bool) -> TypeGuard[List[str]]:
+    def is_str_list(val: list[object], allow_empty: bool) -> TypeGuard[list[str]]:
         if len(val) == 0:
             return allow_empty
         return all(isinstance(x, str) for x in val)
 
     _T = TypeVar("_T")
 
-    def is_set_of(val: Set[Any], type: Type[_T]) -> TypeGuard[Set[_T]]:
+    def is_set_of(val: set[Any], type: type[_T]) -> TypeGuard[Set[_T]]:
         return all(isinstance(x, type) for x in val)
 
 
@@ -4831,8 +4831,8 @@ The return type of a user-defined type guard function will normally refer to
 a type that is strictly "narrower" than the type of the first argument (that
 is, it's a more specific type that can be assigned to the more general type).
 However, it is not required that the return type be strictly narrower. This
-allows for cases like the example above where ``List[str]`` is not assignable
-to ``List[object]``.
+allows for cases like the example above where ``list[str]`` is not assignable
+to ``list[object]``.
 
 When a conditional statement includes a call to a user-defined type guard
 function, and that function returns true, the expression passed as the first 
@@ -4850,10 +4850,10 @@ is not narrowed in the negative case.
 
 ::
 
-    OneOrTwoStrs = Union[Tuple[str], Tuple[str, str]]
+    OneOrTwoStrs = tuple[str] | tuple[str, str]
     def func(val: OneOrTwoStrs):
         if is_two_element_tuple(val):
-            reveal_type(val)  # Tuple[str, str]
+            reveal_type(val)  # tuple[str, str]
             ...
         else:
             reveal_type(val)   # OneOrTwoStrs
@@ -4863,7 +4863,7 @@ is not narrowed in the negative case.
             reveal_type(val)   # OneOrTwoStrs
             ...
         else:
-            reveal_type(val)  # Tuple[str, str]
+            reveal_type(val)  # tuple[str, str]
             ...
 
 Compatibility with other uses of function annotations
