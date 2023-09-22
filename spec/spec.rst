@@ -3450,6 +3450,107 @@ following should be allowed::
    Y: Final = "y"
    N = NamedTuple("N", [(X, int), (Y, int)])
 
+Annotated
+---------
+
+(Originally specified by :pep:`593`.)
+
+Syntax
+^^^^^^
+
+``Annotated`` is parameterized with a type and an arbitrary list of
+Python values that represent the annotations. Here are the specific
+details of the syntax:
+
+* The first argument to ``Annotated`` must be a valid type
+
+* Multiple type annotations are supported (``Annotated`` supports variadic
+  arguments)::
+
+    Annotated[int, ValueRange(3, 10), ctype("char")]
+
+* ``Annotated`` must be called with at least two arguments (
+  ``Annotated[int]`` is not valid)
+
+* The order of the annotations is preserved and matters for equality
+  checks::
+
+    Annotated[int, ValueRange(3, 10), ctype("char")] != Annotated[
+        int, ctype("char"), ValueRange(3, 10)
+    ]
+
+* Nested ``Annotated`` types are flattened, with metadata ordered
+  starting with the innermost annotation::
+
+    Annotated[Annotated[int, ValueRange(3, 10)], ctype("char")] == Annotated[
+        int, ValueRange(3, 10), ctype("char")
+    ]
+
+* Duplicated annotations are not removed::
+
+    Annotated[int, ValueRange(3, 10)] != Annotated[
+        int, ValueRange(3, 10), ValueRange(3, 10)
+    ]
+
+* ``Annotated`` can be used with nested and generic aliases::
+
+    Typevar T = ...
+    Vec = Annotated[List[Tuple[T, T]], MaxLen(10)]
+    V = Vec[int]
+
+    V == Annotated[List[Tuple[int, int]], MaxLen(10)]
+
+Consuming annotations
+^^^^^^^^^^^^^^^^^^^^^
+
+Ultimately, the responsibility of how to interpret the annotations (if
+at all) is the responsibility of the tool or library encountering the
+``Annotated`` type. A tool or library encountering an ``Annotated`` type
+can scan through the annotations to determine if they are of interest
+(e.g., using ``isinstance()``).
+
+**Unknown annotations:** When a tool or a library does not support
+annotations or encounters an unknown annotation it should just ignore it
+and treat annotated type as the underlying type. For example, when encountering
+an annotation that is not an instance of ``struct2.ctype`` to the annotations
+for name (e.g., ``Annotated[str, 'foo', struct2.ctype("<10s")]``), the unpack
+method should ignore it.
+
+**Namespacing annotations:** Namespaces are not needed for annotations since
+the class used by the annotations acts as a namespace.
+
+**Multiple annotations:** It's up to the tool consuming the annotations
+to decide whether the client is allowed to have several annotations on
+one type and how to merge those annotations.
+
+Since the ``Annotated`` type allows you to put several annotations of
+the same (or different) type(s) on any node, the tools or libraries
+consuming those annotations are in charge of dealing with potential
+duplicates. For example, if you are doing value range analysis you might
+allow this::
+
+    T1 = Annotated[int, ValueRange(-10, 5)]
+    T2 = Annotated[T1, ValueRange(-20, 3)]
+
+Flattening nested annotations, this translates to::
+
+    T2 = Annotated[int, ValueRange(-10, 5), ValueRange(-20, 3)]
+
+Aliases & Concerns over verbosity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Writing ``typing.Annotated`` everywhere can be quite verbose;
+fortunately, the ability to alias annotations means that in practice we
+don't expect clients to have to write lots of boilerplate code::
+
+    T = TypeVar('T')
+    Const = Annotated[T, my_annotations.CONST]
+
+    class C:
+        def const_method(self: Const[List[int]]) -> int:
+            ...
+
+
 Compatibility with other uses of function annotations
 =====================================================
 
