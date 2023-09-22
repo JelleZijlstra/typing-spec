@@ -125,7 +125,8 @@ equivalent to ``type(None)``.
 Type aliases
 ------------
 
-(See :pep:`613` for the introduction of ``TypeAlias``.)
+(See :pep:`613` for the introduction of ``TypeAlias``, and
+:pep:`695` for the ``type`` statement.)
 
 Type aliases may be defined by simple variable assignments::
 
@@ -138,6 +139,12 @@ Or by using ``typing.TypeAlias``::
   from typing import TypeAlias
 
   Url: TypeAlias = str
+
+  def retry(url: Url, retry_count: int) -> None: ...
+
+Or by using the ``type`` statement (Python 3.12 and higher)::
+
+  type Url = str
 
   def retry(url: Url, retry_count: int) -> None: ...
 
@@ -211,6 +218,29 @@ isolation. For the sake of backwards compatibility, type checkers should support
 both simultaneously, meaning an untyped global expression ``x = int`` will
 still be considered a valid type alias.
 
+The ``type`` statement allows the creation of explicitly generic
+type aliases::
+
+  type ListOrSet[T] = list[T] | set[T]
+
+Type parameters declared as part of a generic type alias are valid only
+when evaluating the right-hand side of the type alias.
+
+As with ``typing.TypeAlias``, type checkers should restrict the right-hand
+expression to expression forms that are allowed within type annotations.
+The use of more complex expression forms (call expressions, ternary operators,
+arithmetic operators, comparison operators, etc.) should be flagged as an
+error.
+
+Type alias expressions are not allowed to use traditional type variables (i.e.
+those allocated with an explicit ``TypeVar`` constructor call). Type checkers
+should generate an error in this case.
+
+::
+
+    T = TypeVar("T")
+    type MyList = list[T]  # Type checker error: traditional type variable usage
+
 
 Callable
 --------
@@ -274,7 +304,16 @@ Generics can be parameterized by using a factory available in
   def first(l: Sequence[T]) -> T:   # Generic function
       return l[0]
 
-In this case the contract is that the returned value is consistent with
+Or, since Python 3.12 (:pep:`695`), by using the new syntax for
+generic functions::
+
+  from collections.abc import Sequence
+
+  def first[T](l: Sequence[T]) -> T:   # Generic function
+      return l[0]
+
+The two syntaxes are equivalent.
+In either case the contract is that the returned value is consistent with
 the elements held by the collection.
 
 A ``TypeVar()`` expression must always directly be assigned to a
@@ -293,6 +332,11 @@ Example of constraining a type variable::
   AnyStr = TypeVar('AnyStr', str, bytes)
 
   def concat(x: AnyStr, y: AnyStr) -> AnyStr:
+      return x + y
+
+Or using the built-in syntax (3.12 and higher)::
+
+  def concat[AnyStr: (str, bytes)](x: AnyStr, y: AnyStr) -> AnyStr:
       return x + y
 
 The function ``concat`` can be called with either two ``str`` arguments
@@ -351,6 +395,15 @@ as generic.  Example::
 
       def log(self, message: str) -> None:
           self.logger.info('{}: {}'.format(self.name, message))
+
+Or, in Python 3.12 and higher, by using the new syntax for generic
+classes::
+
+  class LoggedVar[T]:
+      # methods as in previous example
+
+This implicitly adds ``Generic[T]`` as a base class and type checkers
+should treat the two largely equivalently (except for variance, see below).
 
 ``Generic[T]`` as a base class defines that the class ``LoggedVar``
 takes a single type parameter ``T``. This also makes ``T`` valid as
@@ -741,11 +794,13 @@ introduction to these concepts can be found on `Wikipedia
 <wiki-variance_>`_ and in :pep:`483`; here we just show how to control
 a type checker's behavior.
 
-By default generic types are considered *invariant* in all type variables,
+By default generic types declared using the old ``TypeVar`` syntax
+are considered *invariant* in all type variables,
 which means that values for variables annotated with types like
 ``list[Employee]`` must exactly match the type annotation -- no subclasses or
 superclasses of the type parameter (in this example ``Employee``) are
-allowed.
+allowed. See below for the behavior when using the built-in generic syntax
+in Python 3.12 and higher.
 
 To facilitate the declaration of container types where covariant or
 contravariant type checking is acceptable, type variables accept keyword
@@ -813,6 +868,156 @@ while the following is prohibited::
 
   def bad_func(x: B_co) -> B_co:  # Flagged as error by a type checker
       ...
+
+Variance Inference
+------------------
+
+(Originally specified by :pep:`695`.)
+
+The introduction of explicit syntax for generic classes in Python 3.12
+eliminates the need for variance to be specified for type
+parameters. Instead, type checkers will infer the variance of type parameters
+based on their usage within a class. Type parameters are inferred to be
+invariant, covariant, or contravariant depending on how they are used.
+
+Python type checkers already include the ability to determine the variance of
+type parameters for the purpose of validating variance within a generic
+protocol class. This capability can be used for all classes (whether or not
+they are protocols) to calculate the variance of each type parameter.
+
+The algorithm for computing the variance of a type parameter is as follows.
+
+For each type parameter in a generic class:
+
+1. If the type parameter is variadic (``TypeVarTuple``) or a parameter
+specification (``ParamSpec``), it is always considered invariant. No further
+inference is needed.
+
+2. If the type parameter comes from a traditional ``TypeVar`` declaration and
+is not specified as ``infer_variance`` (see below), its variance is specified
+by the ``TypeVar`` constructor call. No further inference is needed.
+
+3. Create two specialized versions of the class. We'll refer to these as
+``upper`` and ``lower`` specializations. In both of these specializations,
+replace all type parameters other than the one being inferred by a dummy type
+instance (a concrete anonymous class that is type compatible with itself and
+assumed to meet the bounds or constraints of the type parameter). In
+the ``upper`` specialized class, specialize the target type parameter with
+an ``object`` instance. This specialization ignores the type parameter's
+upper bound or constraints. In the ``lower`` specialized class, specialize
+the target type parameter with itself (i.e. the corresponding type argument
+is the type parameter itself).
+
+4. Determine whether ``lower`` can be assigned to ``upper`` using normal type
+compatibility rules. If so, the target type parameter is covariant. If not,
+determine whether ``upper`` can be assigned to ``lower``. If so, the target
+type parameter is contravariant. If neither of these combinations are
+assignable, the target type parameter is invariant.
+
+Here is an example.
+
+::
+
+    class ClassA[T1, T2, T3](list[T1]):
+        def method1(self, a: T2) -> None:
+            ...
+        
+        def method2(self) -> T3:
+            ...
+
+To determine the variance of ``T1``, we specialize ``ClassA`` as follows:
+
+::
+
+    upper = ClassA[object, Dummy, Dummy]
+    lower = ClassA[T1, Dummy, Dummy]
+
+We find that ``upper`` is not assignable to ``lower`` using normal type
+compatibility rules defined in :pep:`484`. Likewise, ``lower`` is not assignable
+to ``upper``, so we conclude that ``T1`` is invariant.
+
+To determine the variance of ``T2``, we specialize ``ClassA`` as follows:
+
+::
+
+    upper = ClassA[Dummy, object, Dummy]
+    lower = ClassA[Dummy, T2, Dummy]
+
+Since ``upper`` is assignable to ``lower``, ``T2`` is contravariant.
+
+To determine the variance of ``T3``, we specialize ``ClassA`` as follows:
+
+::
+
+    upper = ClassA[Dummy, Dummy, object]
+    lower = ClassA[Dummy, Dummy, T3]
+
+Since ``lower`` is assignable to ``upper``, ``T3`` is covariant.
+
+
+Auto Variance For TypeVar
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The existing ``TypeVar`` class constructor accepts keyword parameters named
+``covariant`` and ``contravariant``. If both of these are ``False``, the
+type variable is assumed to be invariant. We propose to add another keyword
+parameter named ``infer_variance`` indicating that a type checker should use
+inference to determine whether the type variable is invariant, covariant or
+contravariant. A corresponding instance variable ``__infer_variance__`` can be
+accessed at runtime to determine whether the variance is inferred. Type
+variables that are implicitly allocated using the new syntax will always
+have ``__infer_variance__`` set to ``True``.
+
+A generic class that uses the traditional syntax may include combinations of
+type variables with explicit and inferred variance.
+
+::
+
+    T1 = TypeVar("T1", infer_variance=True)  # Inferred variance
+    T2 = TypeVar("T2")  # Invariant
+    T3 = TypeVar("T3", covariant=True)  # Covariant
+
+    # A type checker should infer the variance for T1 but use the
+    # specified variance for T2 and T3.
+    class ClassA(Generic[T1, T2, T3]): ...
+
+
+Compatibility with Traditional TypeVars
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The existing mechanism for allocating ``TypeVar``, ``TypeVarTuple``, and
+``ParamSpec`` is retained for backward compatibility. However, these
+"traditional" type variables should not be combined with type parameters
+allocated using the new syntax. Such a combination should be flagged as
+an error by type checkers. This is necessary because the type parameter
+order is ambiguous.
+
+It is OK to combine traditional type variables with new-style type parameters
+if the class, function, or type alias does not use the new syntax. The
+new-style type parameters must come from an outer scope in this case.
+
+::
+
+    K = TypeVar("K")
+
+    class ClassA[V](dict[K, V]): ...  # Type checker error
+
+    class ClassB[K, V](dict[K, V]): ...  # OK
+
+    class ClassC[V]:
+        # The use of K and V for "method1" is OK because it uses the
+        # "traditional" generic function mechanism where type parameters
+        # are implicit. In this case V comes from an outer scope (ClassC)
+        # and K is introduced implicitly as a type parameter for "method1".
+        def method1(self, a: V, b: K) -> V | K: ...
+
+        # The use of M and K are not allowed for "method2". A type checker
+        # should generate an error in this case because this method uses the
+        # new syntax for type parameters, and all type parameters associated
+        # with the method must be explicitly declared. In this case, ``K``
+        # is not declared by "method2", nor is it supplied by a new-style
+        # type parameter defined in an outer scope.
+        def method2[M](self, a: M, b: K) -> M | K: ...
 
 
 Special cases for subtyping
@@ -3780,6 +3985,13 @@ inheriting from ``Generic[P]`` makes a class generic on
    def f(x: X[int, ...]) -> str: ...                    # Accepted
    def f(x: X[int, int]) -> str: ...                    # Rejected
 
+Or, equivalently, using the built-in syntax for generics in Python 3.12
+and higher::
+
+  class X[T, **P]:
+    f: Callable[P, int]
+    x: T
+
 By the rules defined above, spelling a concrete instance of a class generic
 with respect to only a single ``ParamSpec`` would require unsightly double
 brackets.  For aesthetic purposes we allow these to be omitted.
@@ -4132,13 +4344,27 @@ In the same way that a normal type variable is a stand-in for a single
 type such as ``int``, a type variable *tuple* is a stand-in for a *tuple* type such as
 ``tuple[int, str]``.
 
-Type variable tuples are created with:
+Type variable tuples are created and used with:
 
 ::
 
     from typing import TypeVarTuple
 
     Ts = TypeVarTuple('Ts')
+
+    class Array(Generic[*Ts]):
+      ...
+
+    def foo(*args: *Ts):
+      ...
+
+Or when using the built-in syntax for generics in Python 3.12 and higher::
+
+    class Array[*Ts]:
+      ...
+    
+    def foo[*Ts](*args: *Ts):
+      ...
 
 Using Type Variable Tuples in Generic Classes
 """""""""""""""""""""""""""""""""""""""""""""
