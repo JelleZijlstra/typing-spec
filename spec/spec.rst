@@ -3494,11 +3494,11 @@ details of the syntax:
 
 * ``Annotated`` can be used with nested and generic aliases::
 
-    Typevar T = ...
-    Vec = Annotated[List[Tuple[T, T]], MaxLen(10)]
+    T = TypeVar("T")
+    Vec = Annotated[list[tuple[T, T]], MaxLen(10)]
     V = Vec[int]
 
-    V == Annotated[List[Tuple[int, int]], MaxLen(10)]
+    V == Annotated[list[tuple[int, int]], MaxLen(10)]
 
 Consuming annotations
 ^^^^^^^^^^^^^^^^^^^^^
