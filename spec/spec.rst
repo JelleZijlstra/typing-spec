@@ -2787,7 +2787,7 @@ example, whether or not the following program type checks is left unspecified::
 
 
 TypedDict
-^^^^^^^^^
+---------
 
 (Originally specified in :pep:`589`.)
 
@@ -3033,7 +3033,8 @@ The totality flag only applies to items defined in the body of the
 TypedDict definition.  Inherited items won't be affected, and instead
 use totality of the TypedDict type where they were defined.  This makes
 it possible to have a combination of required and non-required keys in
-a single TypedDict type.
+a single TypedDict type. Alternatively, ``Required`` and ``NotRequired``
+(see below) can be used to mark individual items as required or non-required.
 
 
 Alternative Syntax
@@ -3053,8 +3054,7 @@ It is also possible to specify totality using the alternative syntax::
                       total=False)
 
 The semantics are equivalent to the class-based syntax.  This syntax
-doesn't support inheritance, however, and there is no way to
-have both required and non-required fields in a single type.  The
+doesn't support inheritance, however.  The
 motivation for this is keeping the backwards compatible syntax as
 simple as possible while covering the most common use cases.
 
@@ -3305,6 +3305,118 @@ inferred.  Otherwise existing code that type checks without errors may
 start generating errors once TypedDict support is added to the type
 checker, since TypedDict types are more restrictive than dictionary
 types.  In particular, they aren't subtypes of dictionary types.
+
+
+``Required`` and ``NotRequired``
+--------------------------------
+
+(Originally specified in :pep:`655`.)
+
+The ``typing.Required`` type qualifier is used to indicate that a
+variable declared in a TypedDict definition is a required key:
+
+::
+
+   class Movie(TypedDict, total=False):
+       title: Required[str]
+       year: int
+
+Additionally the ``typing.NotRequired`` type qualifier is used to
+indicate that a variable declared in a TypedDict definition is a
+potentially-missing key:
+
+::
+
+   class Movie(TypedDict):  # implicitly total=True
+       title: str
+       year: NotRequired[int]
+
+It is an error to use ``Required[]`` or ``NotRequired[]`` in any
+location that is not an item of a TypedDict.
+Type checkers must enforce this restriction.
+
+It is valid to use ``Required[]`` and ``NotRequired[]`` even for
+items where it is redundant, to enable additional explicitness if desired:
+
+::
+
+   class Movie(TypedDict):
+       title: Required[str]  # redundant
+       year: NotRequired[int]
+
+It is an error to use both ``Required[]`` and ``NotRequired[]`` at the
+same time:
+
+::
+
+   class Movie(TypedDict):
+       title: str
+       year: NotRequired[Required[int]]  # ERROR
+
+Type checkers must enforce this restriction.
+The runtime implementations of ``Required[]`` and ``NotRequired[]``
+may also enforce this restriction.
+
+The :pep:`alternative functional syntax <589#alternative-syntax>`
+for TypedDict also supports
+``Required[]`` and ``NotRequired[]``:
+
+::
+
+   Movie = TypedDict('Movie', {'name': str, 'year': NotRequired[int]})
+
+
+Interaction with ``total=False``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Any :pep:`589`-style TypedDict declared with ``total=False`` is equivalent
+to a TypedDict with an implicit ``total=True`` definition with all of its
+keys marked as ``NotRequired[]``.
+
+Therefore:
+
+::
+
+   class _MovieBase(TypedDict):  # implicitly total=True
+       title: str
+
+   class Movie(_MovieBase, total=False):
+       year: int
+
+
+is equivalent to:
+
+::
+
+   class _MovieBase(TypedDict):
+       title: str
+
+   class Movie(_MovieBase):
+       year: NotRequired[int]
+
+
+Interaction with ``Annotated[]``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Required[]`` and ``NotRequired[]`` can be used with ``Annotated[]``,
+in any nesting order:
+
+::
+
+   class Movie(TypedDict):
+       title: str
+       year: NotRequired[Annotated[int, ValueRange(-9999, 9999)]]  # ok
+
+::
+
+   class Movie(TypedDict):
+       title: str
+       year: Annotated[NotRequired[int], ValueRange(-9999, 9999)]  # ok
+
+In particular allowing ``Annotated[]`` to be the outermost annotation
+for an item allows better interoperability with non-typing uses of
+annotations, which may always want ``Annotated[]`` as the outermost annotation.
+[3]_
 
 
 The ``final`` decorator
@@ -5799,3 +5911,5 @@ to the ``*`` syntax. In particular, the following are equivalent:
 
 .. [data-model]
    https://docs.python.org/3/reference/datamodel.html#special-method-names
+
+.. [3] https://bugs.python.org/issue46491
