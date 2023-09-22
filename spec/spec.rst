@@ -139,10 +139,11 @@ Type aliases may be as complex as type hints in annotations --
 anything that is acceptable as a type hint is acceptable in a type
 alias::
 
-    from typing import TypeVar, Iterable, Tuple
+    from typing import TypeVar
+    from collections.abc import Iterable
 
     T = TypeVar('T', int, float, complex)
-    Vector = Iterable[Tuple[T, T]]
+    Vector = Iterable[tuple[T, T]]
 
     def inproduct(v: Vector[T]) -> T:
         return sum(x*y for x, y in v)
@@ -153,15 +154,16 @@ alias::
 
 This is equivalent to::
 
-    from typing import TypeVar, Iterable, Tuple
+    from typing import TypeVar
+    from collections.abc import Iterable
 
     T = TypeVar('T', int, float, complex)
 
-    def inproduct(v: Iterable[Tuple[T, T]]) -> T:
+    def inproduct(v: Iterable[tuple[T, T]]) -> T:
         return sum(x*y for x, y in v)
-    def dilate(v: Iterable[Tuple[T, T]], scale: T) -> Iterable[Tuple[T, T]]:
+    def dilate(v: Iterable[tuple[T, T]], scale: T) -> Iterable[tuple[T, T]]:
         return ((x * scale, y * scale) for x, y in v)
-    vec: Iterable[Tuple[float, float]] = []
+    vec: Iterable[tuple[float, float]] = []
 
 
 Callable
@@ -171,7 +173,7 @@ Frameworks expecting callback functions of specific signatures might be
 type hinted using ``Callable[[Arg1Type, Arg2Type], ReturnType]``.
 Examples::
 
-  from typing import Callable
+  from collections.abc import Callable
 
   def feeder(get_next_item: Callable[[], str]) -> None:
       # Body
@@ -211,14 +213,15 @@ statically inferred in a generic way, abstract base classes have been
 extended to support subscription to denote expected types for container
 elements.  Example::
 
-  from typing import Mapping, Set
+  from collections.abc import Mapping
 
-  def notify_by_email(employees: Set[Employee], overrides: Mapping[str, str]) -> None: ...
+  def notify_by_email(employees: set[Employee], overrides: Mapping[str, str]) -> None: ...
 
 Generics can be parameterized by using a factory available in
 ``typing`` called ``TypeVar``.  Example::
 
-  from typing import Sequence, TypeVar
+  from collections.abc import Sequence
+  from typing import TypeVar
 
   T = TypeVar('T')      # Declare type variable
 
@@ -239,9 +242,9 @@ example, we can define a type variable that ranges over just ``str`` and
 ``bytes``. By default, a type variable ranges over all possible types.
 Example of constraining a type variable::
 
-  from typing import TypeVar, Text
+  from typing import TypeVar
 
-  AnyStr = TypeVar('AnyStr', Text, bytes)
+  AnyStr = TypeVar('AnyStr', str, bytes)
 
   def concat(x: AnyStr, y: AnyStr) -> AnyStr:
       return x + y
@@ -268,11 +271,11 @@ value assigned to ``x`` will also be ``str``.
 Additionally, ``Any`` is a valid value for every type variable.
 Consider the following::
 
-  def count_truthy(elements: List[Any]) -> int:
+  def count_truthy(elements: list[Any]) -> int:
       return sum(1 for elem in elements if elem)
 
 This is equivalent to omitting the generic notation and just saying
-``elements: List``.
+``elements: list``.
 
 
 User-defined generic types
@@ -310,7 +313,7 @@ a type within the class body.
 The ``Generic`` base class uses a metaclass that defines ``__getitem__``
 so that ``LoggedVar[t]`` is valid as a type::
 
-  from typing import Iterable
+  from collections.abc import Iterable
 
   def zero_all_vars(vars: Iterable[LoggedVar[int]]) -> None:
       for var in vars:
@@ -343,7 +346,8 @@ The ``Generic[T]`` base class is redundant in simple cases where you
 subclass some other generic class and specify type variables for its
 parameters::
 
-  from typing import TypeVar, Iterator
+  from typing import TypeVar
+  from collections.abc import Iterator
 
   T = TypeVar('T')
 
@@ -357,7 +361,8 @@ That class definition is equivalent to::
 
 You can use multiple inheritance with ``Generic``::
 
-  from typing import TypeVar, Generic, Sized, Iterable, Container, Tuple
+  from typing import TypeVar, Generic
+  from collections.abc import Sized, Iterable, Container
 
   T = TypeVar('T')
 
@@ -367,8 +372,8 @@ You can use multiple inheritance with ``Generic``::
   K = TypeVar('K')
   V = TypeVar('V')
 
-  class MyMapping(Iterable[Tuple[K, V]],
-                  Container[Tuple[K, V]],
+  class MyMapping(Iterable[tuple[K, V]],
+                  Container[tuple[K, V]],
                   Generic[K, V]):
       ...
 
@@ -376,7 +381,7 @@ Subclassing a generic class without specifying type parameters assumes
 ``Any`` for each position.  In the following example, ``MyIterable``
 is not generic but implicitly inherits from ``Iterable[Any]``::
 
-  from typing import Iterable
+  from collections.abc import Iterable
 
   class MyIterable(Iterable):  # Same as Iterable[Any]
       ...
@@ -440,13 +445,13 @@ However, there are some special cases in the static typechecking context:
 
     def a_fun(x: T) -> None:
         # this is OK
-        y: List[T] = []
+        y: list[T] = []
         # but below is an error!
-        y: List[S] = []
+        y: list[S] = []
 
     class Bar(Generic[T]):
         # this is also an error
-        an_attr: List[S] = []
+        an_attr: list[S] = []
 
         def do_something(x: S) -> S:  # this is OK though
             ...
@@ -454,12 +459,10 @@ However, there are some special cases in the static typechecking context:
 * A generic class definition that appears inside a generic function
   should not use type variables that parameterize the generic function::
 
-    from typing import List
-
     def a_fun(x: T) -> None:
 
         # This is OK
-        a_list: List[T] = []
+        a_list: list[T] = []
         ...
 
         # This is however illegal
@@ -477,7 +480,7 @@ However, there are some special cases in the static typechecking context:
         class Bad(Iterable[T]):       # Error
             ...
         class AlsoBad:
-            x: List[T]  # Also an error
+            x: list[T]  # Also an error
 
         class Inner(Iterable[S]):     # OK
             ...
@@ -581,17 +584,17 @@ Arbitrary generic types as base classes
 
 ``Generic[T]`` is only valid as a base class -- it's not a proper type.
 However, user-defined generic types such as ``LinkedList[T]`` from the
-above example and built-in generic types and ABCs such as ``List[T]``
+above example and built-in generic types and ABCs such as ``list[T]``
 and ``Iterable[T]`` are valid both as types and as base classes. For
-example, we can define a subclass of ``Dict`` that specializes type
+example, we can define a subclass of ``dict`` that specializes type
 arguments::
 
-  from typing import Dict, List, Optional
+  from typing import Optional
 
   class Node:
       ...
 
-  class SymbolTable(Dict[str, List[Node]]):
+  class SymbolTable(dict[str, list[Node]]):
       def push(self, name: str, node: Node) -> None:
           self.setdefault(name, []).append(node)
 
@@ -604,14 +607,15 @@ arguments::
               return nodes[-1]
           return None
 
-``SymbolTable`` is a subclass of ``dict`` and a subtype of ``Dict[str,
-List[Node]]``.
+``SymbolTable`` is a subclass of ``dict`` and a subtype of ``dict[str,
+list[Node]]``.
 
 If a generic base class has a type variable as a type argument, this
 makes the defined class generic. For example, we can define a generic
 ``LinkedList`` class that is iterable and a container::
 
-  from typing import TypeVar, Iterable, Container
+  from typing import TypeVar
+  from collections.abc import Iterable, Container
 
   T = TypeVar('T')
 
@@ -624,7 +628,8 @@ same type variable ``T`` multiple times within ``Generic[...]``.
 
 Also consider the following example::
 
-  from typing import TypeVar, Mapping
+  from typing import TypeVar
+  from collections.abc import Mapping
 
   T = TypeVar('T')
 
@@ -651,7 +656,8 @@ A type variable may specify an upper bound using ``bound=<type>`` (note:
 actual type substituted (explicitly or implicitly) for the type variable must
 be a subtype of the boundary type. Example::
 
-  from typing import TypeVar, Sized
+  from typing import TypeVar
+  from collections.abc import Sized
 
   ST = TypeVar('ST', bound=Sized)
 
@@ -661,8 +667,8 @@ be a subtype of the boundary type. Example::
       else:
           return y
 
-  longer([1], [1, 2])  # ok, return type List[int]
-  longer({1}, {1, 2})  # ok, return type Set[int]
+  longer([1], [1, 2])  # ok, return type list[int]
+  longer({1}, {1, 2})  # ok, return type set[int]
   longer([1], {1, 2})  # ok, return type Collection[int]
 
 An upper bound cannot be combined with type constraints (as in used
@@ -677,8 +683,8 @@ Covariance and contravariance
 
 Consider a class ``Employee`` with a subclass ``Manager``.  Now
 suppose we have a function with an argument annotated with
-``List[Employee]``.  Should we be allowed to call this function with a
-variable of type ``List[Manager]`` as its argument?  Many people would
+``list[Employee]``.  Should we be allowed to call this function with a
+variable of type ``list[Manager]`` as its argument?  Many people would
 answer "yes, of course" without even considering the consequences.
 But unless we know more about the function, a type checker should
 reject such a call: the function might append an ``Employee`` instance
@@ -693,7 +699,7 @@ a type checker's behavior.
 
 By default generic types are considered *invariant* in all type variables,
 which means that values for variables annotated with types like
-``List[Employee]`` must exactly match the type annotation -- no subclasses or
+``list[Employee]`` must exactly match the type annotation -- no subclasses or
 superclasses of the type parameter (in this example ``Employee``) are
 allowed.
 
@@ -709,7 +715,8 @@ defined with ``contravariant=True``.
 A typical example involves defining an immutable (or read-only)
 container class::
 
-  from typing import TypeVar, Generic, Iterable, Iterator
+  from typing import TypeVar, Generic
+  from collections.abc import Iterable, Iterator
 
   T_co = TypeVar('T_co', covariant=True)
 
@@ -815,7 +822,7 @@ example::
 
     class Tree:
         ...
-        def leaves(self) -> List['Tree']:
+        def leaves(self) -> list['Tree']:
             ...
 
 A common use for forward references is when e.g. Django models are
@@ -980,19 +987,18 @@ A function parameter without an annotation is assumed to be annotated with
 ``Any``. If a generic type is used without specifying type parameters,
 they are assumed to be ``Any``::
 
-  from typing import Mapping
+  from collections.abc import Mapping
 
   def use_map(m: Mapping) -> None:  # Same as Mapping[Any, Any]
       ...
 
-This rule also applies to ``Tuple``, in annotation context it is equivalent
-to ``Tuple[Any, ...]`` and, in turn, to ``tuple``. As well, a bare
-``Callable`` in an annotation is equivalent to ``Callable[..., Any]`` and,
-in turn, to ``collections.abc.Callable``::
+This rule also applies to ``tuple``, in annotation context it is equivalent
+to ``tuple[Any, ...]``. As well, a bare
+``Callable`` in an annotation is equivalent to ``Callable[..., Any]``::
 
-  from typing import Tuple, List, Callable
+  from collections.abc import Callable
 
-  def check_args(args: Tuple) -> bool:
+  def check_args(args: tuple) -> bool:
       ...
 
   check_args(())           # OK
@@ -1000,7 +1006,7 @@ in turn, to ``collections.abc.Callable``::
   check_args(3.14)         # Flagged as error by a type checker
 
   # A list of arbitrary callables is accepted by this function
-  def apply_callbacks(cbs: List[Callable]) -> None:
+  def apply_callbacks(cbs: list[Callable]) -> None:
       ...
 
 
@@ -1041,13 +1047,13 @@ is unreachable and will behave accordingly::
 The ``NoReturn`` type is only valid as a return annotation of functions,
 and considered an error if it appears in other positions::
 
-  from typing import List, NoReturn
+  from typing import NoReturn
 
   # All of the following are errors
   def bad1(x: NoReturn) -> int:
       ...
   bad2: NoReturn = None
-  def bad3() -> List[NoReturn]:
+  def bad3() -> list[NoReturn]:
       ...
 
 
@@ -1056,8 +1062,8 @@ The type of class objects
 
 Sometimes you want to talk about class objects, in particular class
 objects that inherit from a given class.  This can be spelled as
-``Type[C]`` where ``C`` is a class.  To clarify: while ``C`` (when
-used as an annotation) refers to instances of class ``C``, ``Type[C]``
+``type[C]`` where ``C`` is a class.  To clarify: while ``C`` (when
+used as an annotation) refers to instances of class ``C``, ``type[C]``
 refers to *subclasses* of ``C``.  (This is a similar distinction as
 between ``object`` and ``type``.)
 
@@ -1076,17 +1082,17 @@ these classes if you pass it a class object::
       # (Here we could write the user object to a database)
       return user
 
-Without ``Type[]`` the best we could do to annotate ``new_user()``
+Without subscripting ``type[]`` the best we could do to annotate ``new_user()``
 would be::
 
   def new_user(user_class: type) -> User:
       ...
 
-However using ``Type[]`` and a type variable with an upper bound we
+However using ``type[]`` and a type variable with an upper bound we
 can do much better::
 
   U = TypeVar('U', bound=User)
-  def new_user(user_class: Type[U]) -> U:
+  def new_user(user_class: type[U]) -> U:
       ...
 
 Now when we call ``new_user()`` with a specific subclass of ``User`` a
@@ -1094,16 +1100,16 @@ type checker will infer the correct type of the result::
 
   joe = new_user(BasicUser)  # Inferred type is BasicUser
 
-The value corresponding to ``Type[C]`` must be an actual class object
+The value corresponding to ``type[C]`` must be an actual class object
 that's a subtype of ``C``, not a special form.  In other words, in the
 above example calling e.g. ``new_user(Union[BasicUser, ProUser])`` is
 rejected by the type checker (in addition to failing at runtime
 because you can't instantiate a union).
 
 Note that it is legal to use a union of classes as the parameter for
-``Type[]``, as in::
+``type[]``, as in::
 
-  def new_non_team_user(user_class: Type[Union[BasicUser, ProUser]]):
+  def new_non_team_user(user_class: type[Union[BasicUser, ProUser]]):
       user = new_user(user_class)
       ...
 
@@ -1113,42 +1119,38 @@ concrete class object, e.g. in the above example::
   new_non_team_user(ProUser)  # OK
   new_non_team_user(TeamUser)  # Disallowed by type checker
 
-``Type[Any]`` is also supported (see below for its meaning).
+``type[Any]`` is also supported (see below for its meaning).
 
-``Type[T]`` where ``T`` is a type variable is allowed when annotating the
+``type[T]`` where ``T`` is a type variable is allowed when annotating the
 first argument of a class method (see the relevant section).
 
-Any other special constructs like ``Tuple`` or ``Callable`` are not allowed
-as an argument to ``Type``.
+Any other special constructs like ``tuple`` or ``Callable`` are not allowed
+as an argument to ``type``.
 
 There are some concerns with this feature: for example when
 ``new_user()`` calls ``user_class()`` this implies that all subclasses
 of ``User`` must support this in their constructor signature.  However
-this is not unique to ``Type[]``: class methods have similar concerns.
+this is not unique to ``type[]``: class methods have similar concerns.
 A type checker ought to flag violations of such assumptions, but by
 default constructor calls that match the constructor signature in the
 indicated base class (``User`` in the example above) should be
 allowed.  A program containing a complex or extensible class hierarchy
 might also handle this by using a factory class method.
 
-When ``Type`` is parameterized it requires exactly one parameter.
-Plain ``Type`` without brackets is equivalent to ``Type[Any]`` and
-this in turn is equivalent to ``type`` (the root of Python's metaclass
-hierarchy).  This equivalence also motivates the name, ``Type``, as
-opposed to alternatives like ``Class`` or ``SubType``, which were
-proposed while this feature was under discussion; this is similar to
-the relationship between e.g. ``List`` and ``list``.
+When ``type`` is parameterized it requires exactly one parameter.
+Plain ``type`` without brackets, the root of Python's metaclass
+hierarchy, is equivalent to ``type[Any]``.
 
-Regarding the behavior of ``Type[Any]`` (or ``Type`` or ``type``),
+Regarding the behavior of ``type[Any]`` (or ``type``),
 accessing attributes of a variable with this type only provides
 attributes and methods defined by ``type`` (for example,
 ``__repr__()`` and ``__mro__``).  Such a variable can be called with
 arbitrary arguments, and the return type is ``Any``.
 
-``Type`` is covariant in its parameter, because ``Type[Derived]`` is a
-subtype of ``Type[Base]``::
+``type`` is covariant in its parameter, because ``type[Derived]`` is a
+subtype of ``type[Base]``::
 
-  def new_pro_user(pro_user_class: Type[ProUser]):
+  def new_pro_user(pro_user_class: type[ProUser]):
       user = new_user(pro_user_class)  # OK
       ...
 
@@ -1253,8 +1255,8 @@ represent function calls with valid types of arguments::
   foo('', z=0)
 
 In the body of function ``foo``, the type of variable ``args`` is
-deduced as ``Tuple[str, ...]`` and the type of variable ``kwds``
-is ``Dict[str, int]``.
+deduced as ``tuple[str, ...]`` and the type of variable ``kwds``
+is ``dict[str, int]``.
 
 In stubs it may be useful to declare an argument as having a default
 without specifying the actual default value.  For example::
@@ -1291,24 +1293,24 @@ type of ``await`` expression, not to the coroutine type::
   async def foo() -> None:
       bar = await spam(42)  # type is str
 
-The ``typing.py`` module provides a generic version of ABC
-``collections.abc.Coroutine`` to specify awaitables that also support
+The generic ABC ``collections.abc.Coroutine`` can be used
+to specify awaitables that also support
 ``send()`` and ``throw()`` methods. The variance and order of type variables
 correspond to those of ``Generator``, namely ``Coroutine[T_co, T_contra, V_co]``,
 for example::
 
-  from typing import List, Coroutine
-  c: Coroutine[List[str], str, int]
+  from collections.abc import Coroutine
+  c: Coroutine[list[str], str, int]
   ...
-  x = c.send('hi')  # type is List[str]
+  x = c.send('hi')  # type is list[str]
   async def bar() -> None:
       x = await c  # type is int
 
-The module also provides generic ABCs ``Awaitable``,
-``AsyncIterable``, and ``AsyncIterator`` for situations where more precise
+The generic ABCs ``Awaitable``,
+``AsyncIterable``, and ``AsyncIterator`` can be used for situations where more precise
 types cannot be specified::
 
-  def op() -> typing.Awaitable[str]:
+  def op() -> collections.abc.Awaitable[str]:
       if cond:
           return spam(42)
       else:
@@ -1333,14 +1335,14 @@ in ``__init__`` or ``__new__``. The proposed syntax is as follows::
   class BasicStarship:
       captain: str = 'Picard'               # instance variable with default
       damage: int                           # instance variable without default
-      stats: ClassVar[Dict[str, int]] = {}  # class variable
+      stats: ClassVar[dict[str, int]] = {}  # class variable
 
 Here ``ClassVar`` is a special class defined by the typing module that
 indicates to the static type checker that this variable should not be
 set on instances.
 
 Note that a ``ClassVar`` parameter cannot include any type variables, regardless
-of the level of nesting: ``ClassVar[T]`` and ``ClassVar[List[Set[T]]]`` are
+of the level of nesting: ``ClassVar[T]`` and ``ClassVar[list[set[T]]]`` are
 both invalid if ``T`` is a type variable.
 
 This could be illustrated with a more detailed example. In this class::
@@ -1374,7 +1376,7 @@ For example, annotating the discussed class::
   class Starship:
       captain: str = 'Picard'
       damage: int
-      stats: ClassVar[Dict[str, int]] = {}
+      stats: ClassVar[dict[str, int]] = {}
 
       def __init__(self, damage: int, captain: str = None):
           self.damage = damage
@@ -1511,14 +1513,14 @@ for this is that the protocol class implementation is often not shared by
 subtypes, so the interface should not depend on the default implementation.
 Examples::
 
-  from typing import Protocol, List
+  from typing import Protocol
 
   class Template(Protocol):
       name: str        # This is a protocol member
       value: int = 0   # This one too (with default)
 
       def method(self) -> None:
-          self.temp: List[int] = [] # Error in type checker
+          self.temp: list[int] = [] # Error in type checker
 
   class Concrete:
       def __init__(self, name: str, value: int) -> None:
@@ -1587,7 +1589,7 @@ methods "for free". In addition, type checkers can statically verify that
 the class actually implements the protocol correctly::
 
     class RGB(Protocol):
-        rgb: Tuple[int, int, int]
+        rgb: tuple[int, int, int]
 
         @abstractmethod
         def intensity(self) -> int:
@@ -1623,7 +1625,8 @@ A subprotocol can be defined by having *both* one or more protocols as
 immediate base classes and also having ``typing.Protocol`` as an immediate
 base class::
 
-  from typing import Sized, Protocol
+  from typing import Protocol
+  from collections.abc import Sized
 
   class SizedAndClosable(Sized, Protocol):
       def close(self) -> None:
@@ -1636,7 +1639,7 @@ Alternatively, one can implement ``SizedAndClosable`` protocol by merging
 the ``SupportsClose`` protocol from the example in the `definition`_ section
 with ``typing.Sized``::
 
-  from typing import Sized
+  from collections.abc import Sized
 
   class SupportsClose(Protocol):
       def close(self) -> None:
@@ -1732,13 +1735,13 @@ the protocol in situations where the decision depends on itself.
 Continuing the previous example::
 
   class SimpleTree:
-      def leaves(self) -> List['SimpleTree']:
+      def leaves(self) -> list['SimpleTree']:
           ...
 
   root: Traversable = SimpleTree()  # OK
 
   class Tree(Generic[T]):
-      def leaves(self) -> List['Tree[T]']:
+      def leaves(self) -> list['Tree[T]']:
           ...
 
   def walk(graph: Traversable) -> None:
@@ -1780,15 +1783,15 @@ Protocols can be used to define flexible callback types that are hard
 specified by :pep:`484`, such as variadic, overloaded, and complex generic
 callbacks. They can be defined as protocols with a ``__call__`` member::
 
-  from typing import Optional, List, Protocol
+  from typing import Optional, Protocol
 
   class Combiner(Protocol):
       def __call__(self, *vals: bytes,
-                   maxlen: Optional[int] = None) -> List[bytes]: ...
+                   maxlen: Optional[int] = None) -> list[bytes]: ...
 
-  def good_cb(*vals: bytes, maxlen: Optional[int] = None) -> List[bytes]:
+  def good_cb(*vals: bytes, maxlen: Optional[int] = None) -> list[bytes]:
       ...
-  def bad_cb(*vals: bytes, maxitems: Optional[int]) -> List[bytes]:
+  def bad_cb(*vals: bytes, maxitems: Optional[int]) -> list[bytes]:
       ...
 
   comb: Combiner = good_cb  # OK
@@ -1824,7 +1827,7 @@ Static type checkers will recognize protocol implementations, even if the
 corresponding protocols are *not imported*::
 
   # file lib.py
-  from typing import Sized
+  from collections.abc import Sized
 
   T = TypeVar('T', contravariant=True)
   class ListLike(Sized, Protocol[T]):
@@ -1873,7 +1876,7 @@ classes. For example::
 One can use multiple inheritance to define an intersection of protocols.
 Example::
 
-  from typing import Iterable, Hashable
+  from collections.abc import Iterable, Hashable
 
   class HashableFloats(Iterable[float], Hashable, Protocol):
       pass
@@ -1940,7 +1943,8 @@ Protocols are essentially anonymous. To emphasize this point, static type
 checkers might refuse protocol classes inside ``NewType()`` to avoid an
 illusion that a distinct type is provided::
 
-  from typing import NewType, Protocol, Iterator
+  from typing import NewType, Protocol
+  from collections.abc import Iterator
 
   class Id(Protocol):
       code: int
@@ -1951,7 +1955,8 @@ illusion that a distinct type is provided::
 In contrast, type aliases are fully supported, including generic type
 aliases::
 
-  from typing import TypeVar, Reversible, Iterable, Sized
+  from typing import TypeVar
+  from collections.abc import Reversible, Iterable, Sized
 
   T = TypeVar('T')
   class SizedIterable(Iterable[T], Sized, Protocol):
@@ -2107,7 +2112,8 @@ Another example where ``@overload`` comes in handy is the type of the
 builtin ``map()`` function, which takes a different number of
 arguments depending on the type of the callable::
 
-  from typing import Callable, Iterable, Iterator, Tuple, TypeVar, overload
+  from typing import TypeVar, overload
+  from collections.abc import Callable, Iterable, Iterator
 
   T1 = TypeVar('T1')
   T2 = TypeVar('T2')
@@ -2127,7 +2133,7 @@ Note that we could also easily add items to support ``map(None, ...)``::
   @overload
   def map(func: None,
           iter1: Iterable[T1],
-          iter2: Iterable[T2]) -> Iterable[Tuple[T1, T2]]: ...
+          iter2: Iterable[T2]) -> Iterable[tuple[T1, T2]]: ...
 
 Uses of the ``@overload`` decorator as shown above are suitable for
 stub files.  In regular modules, a series of ``@overload``-decorated
@@ -2171,9 +2177,9 @@ A constrained ``TypeVar`` type can often be used instead of using the
 ``@overload`` decorator.  For example, the definitions of ``concat1``
 and ``concat2`` in this stub file are equivalent::
 
-  from typing import TypeVar, Text
+  from typing import TypeVar
 
-  AnyStr = TypeVar('AnyStr', Text, bytes)
+  AnyStr = TypeVar('AnyStr', str, bytes)
 
   def concat1(x: AnyStr, y: AnyStr) -> AnyStr: ...
 
@@ -2256,9 +2262,9 @@ Occasionally the type checker may need a different kind of hint: the
 programmer may know that an expression is of a more constrained type
 than a type checker may be able to infer.  For example::
 
-  from typing import List, cast
+  from typing import cast
 
-  def find_first_str(a: List[object]) -> str:
+  def find_first_str(a: list[object]) -> str:
       index = next(i for i, x in enumerate(a) if isinstance(x, str))
       # We only get here if there's at least one string in a
       return cast(str, a[index])
@@ -2818,7 +2824,7 @@ the older alternatives and treat them as equivalent.
 
 This section lists all of these cases.
 
-.. TODO: add 526 (variable annotations), 585 (builtin generics), 604 (unions), 646 (Unpack), 695 (type parameters)
+.. TODO: add 604 (unions), 646 (Unpack), 695 (type parameters)
 
 Type comments
 -------------
@@ -2828,11 +2834,11 @@ of a specific type existed when the type system was first designed.
 To help with type inference in
 complex cases, a comment of the following format may be used::
 
-  x = []                # type: List[Employee]
-  x, y, z = [], [], []  # type: List[int], List[int], List[str]
-  x, y, z = [], [], []  # type: (List[int], List[int], List[str])
-  a, b, *c = range(5)   # type: float, float, List[float]
-  x = [1, 2]            # type: List[int]
+  x = []                # type: list[Employee]
+  x, y, z = [], [], []  # type: list[int], list[int], list[str]
+  x, y, z = [], [], []  # type: (list[int], list[int], list[str])
+  a, b, *c = range(5)   # type: float, float, list[float]
+  x = [1, 2]            # type: list[int]
 
 Type comments should be put on the last line of the statement that
 contains the variable definition. 
@@ -2840,16 +2846,16 @@ contains the variable definition.
 These should be treated as equivalent to annotating the variables
 using :pep:`526` variable annotations::
 
-  x: List[Employee] = []
-  x: List[int]
-  y: List[int]
-  z: List[str]
+  x: list[Employee] = []
+  x: list[int]
+  y: list[int]
+  z: list[str]
   x, y, z = [], [], []
   a: float
   b: float
-  c: List[float]
+  c: list[float]
   a, b, *c = range(5)
-  x: List[int] = [1, 2]
+  x: list[int] = [1, 2]
 
 Type comments can also be placed on
 ``with`` statements and ``for`` statements, right after the colon.
@@ -3018,6 +3024,60 @@ end with ``__``::
 
   quux(__x=3)  # This call is an error.
 
+
+Generics in standard collections
+--------------------------------
+
+Before Python 3.9 (:pep:`585`), standard library generic types like
+``list`` could not be parameterized at runtime (i.e., ``list[int]``
+would throw an error). Therefore, the ``typing`` module provided
+generic aliases for major builtin and standard library types (e.g.,
+``typing.List[int]``).
+
+In each of these cases, type checkers should treat the library type
+as equivalent to the alias in the ``typing`` module. This includes:
+
+* ``list`` and ``typing.List``
+* ``dict`` and ``typing.Dict``
+* ``set`` and ``typing.Set``
+* ``frozenset`` and ``typing.FrozenSet``
+* ``tuple`` and ``typing.Tuple``
+* ``type`` and ``typing.Type``
+* ``collections.deque`` and ``typing.Deque``
+* ``collections.defaultdict`` and ``typing.DefaultDict``
+* ``collections.OrderedDict`` and ``typing.OrderedDict``
+* ``collections.Counter`` and ``typing.Counter``
+* ``collections.ChainMap`` and ``typing.ChainMap``
+* ``collections.abc.Awaitable`` and ``typing.Awaitable``
+* ``collections.abc.Coroutine`` and ``typing.Coroutine``
+* ``collections.abc.AsyncIterable`` and ``typing.AsyncIterable``
+* ``collections.abc.AsyncIterator`` and ``typing.AsyncIterator``
+* ``collections.abc.AsyncGenerator`` and ``typing.AsyncGenerator``
+* ``collections.abc.Iterable`` and ``typing.Iterable``
+* ``collections.abc.Iterator`` and ``typing.Iterator``
+* ``collections.abc.Generator`` and ``typing.Generator``
+* ``collections.abc.Reversible`` and ``typing.Reversible``
+* ``collections.abc.Container`` and ``typing.Container``
+* ``collections.abc.Collection`` and ``typing.Collection``
+* ``collections.abc.Callable`` and ``typing.Callable``
+* ``collections.abc.Set`` and ``typing.AbstractSet`` (note the change in name)
+* ``collections.abc.MutableSet`` and ``typing.MutableSet``
+* ``collections.abc.Mapping`` and ``typing.Mapping``
+* ``collections.abc.MutableMapping`` and ``typing.MutableMapping``
+* ``collections.abc.Sequence`` and ``typing.Sequence``
+* ``collections.abc.MutableSequence`` and ``typing.MutableSequence``
+* ``collections.abc.ByteString`` and ``typing.ByteString``
+* ``collections.abc.MappingView`` and ``typing.MappingView``
+* ``collections.abc.KeysView`` and ``typing.KeysView``
+* ``collections.abc.ItemsView`` and ``typing.ItemsView``
+* ``collections.abc.ValuesView`` and ``typing.ValuesView``
+* ``contextlib.AbstractContextManager`` and ``typing.ContextManager`` (note the change in name)
+* ``contextlib.AbstractAsyncContextManager`` and ``typing.AsyncContextManager`` (note the change in name)
+* ``re.Pattern`` and ``typing.Pattern``
+* ``re.Match`` and ``typing.Match``
+
+The generic aliases in the ``typing`` module are considered deprecated
+and type checkers may warn if they are used.
 
 .. _mypy:
    http://mypy-lang.org
