@@ -6618,6 +6618,30 @@ to opt into a strict mode where methods that override a parent class are
 required to use the decorator. Strict enforcement should be opt-in for backward
 compatibility.
 
+``assert_type()``
+-----------------
+
+The function ``typing.assert_type(val, typ)`` allows users to
+ask a static type checker to confirm that *val* has an inferred type of *typ*.
+
+When a type checker encounters a call to ``assert_type()``, it
+should emit an error if the value is not of the specified type::
+
+    def greet(name: str) -> None:
+        assert_type(name, str)  # OK, inferred type of `name` is `str`
+        assert_type(name, int)  # type checker error
+
+``reveal_type()``
+-----------------
+
+The function ``reveal_type(obj)`` makes type checkers
+reveal the inferred static type of an expression.
+
+When a static type checker encounters a call to this function,
+it should emit a diagnostic with the type of the argument. For example::
+
+  x: int = 1
+  reveal_type(x)  # Revealed type is "builtins.int"
 
 Compatibility with other uses of function annotations
 =====================================================
