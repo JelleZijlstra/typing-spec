@@ -2406,7 +2406,7 @@ The following parameters are intentionally disallowed by design:
 
 -  Tuples containing valid literal types like ``Literal[(1, "foo", "bar")]``.
    The user could always express this type as
-   ``Tuple[Literal[1], Literal["foo"], Literal["bar"]]`` instead. Also,
+   ``tuple[Literal[1], Literal["foo"], Literal["bar"]]`` instead. Also,
    tuples are likely to be confused with the ``Literal[1, 2, 3]``
    shortcut.
 
@@ -2562,7 +2562,7 @@ indexing into a tuple using an int key that corresponds a valid index::
    a: Literal[0] = 0
    b: Literal[5] = 5
 
-   some_tuple: Tuple[int, str, List[bool]] = (3, "abc", [True, False])
+   some_tuple: tuple[int, str, List[bool]] = (3, "abc", [True, False])
    reveal_type(some_tuple[a])   # Revealed type is 'int'
    some_tuple[b]                # Error: 5 is not a valid index into the tuple
 
@@ -3871,7 +3871,7 @@ afforded to us by this set up:
 
 
 * Inside the function, ``args`` has the type ``P.args``\ , not
-  ``Tuple[P.args, ...]`` as would be with a normal annotation
+  ``tuple[P.args, ...]`` as would be with a normal annotation
   (and likewise with the ``**kwargs``\ )
 
   * This special case is necessary to encapsulate the heterogeneous contents
@@ -4009,7 +4009,7 @@ In order to support the above use cases, we introduce
 but for a *tuple* of types.
 
 In addition, we introduce a new use for the star operator: to 'unpack'
-``TypeVarTuple`` instances and tuple types such as ``Tuple[int,
+``TypeVarTuple`` instances and tuple types such as ``tuple[int,
 str]``. Unpacking a ``TypeVarTuple`` or tuple type is the typing
 equivalent of unpacking a variable or a tuple of values.
 
@@ -4018,7 +4018,7 @@ Type Variable Tuples
 
 In the same way that a normal type variable is a stand-in for a single
 type such as ``int``, a type variable *tuple* is a stand-in for a *tuple* type such as
-``Tuple[int, str]``.
+``tuple[int, str]``.
 
 Type variable tuples are created with:
 
@@ -4032,7 +4032,7 @@ Using Type Variable Tuples in Generic Classes
 """""""""""""""""""""""""""""""""""""""""""""
 
 Type variable tuples behave like a number of individual type variables packed in a
-``Tuple``. To understand this, consider the following example:
+``tuple``. To understand this, consider the following example:
 
 ::
 
@@ -4044,7 +4044,7 @@ Type variable tuples behave like a number of individual type variables packed in
   Width = NewType('Width', int)
   x: Array[Height, Width] = Array()
 
-The ``Shape`` type variable tuple here behaves like ``Tuple[T1, T2]``,
+The ``Shape`` type variable tuple here behaves like ``tuple[T1, T2]``,
 where ``T1`` and ``T2`` are type variables. To use these type variables
 as type parameters of ``Array``, we must *unpack* the type variable tuple using
 the star operator: ``*Shape``. The signature of ``Array`` then behaves
@@ -4074,10 +4074,10 @@ signatures and variable annotations:
 
     class Array(Generic[*Shape]):
 
-        def __init__(self, shape: Tuple[*Shape]):
-            self._shape: Tuple[*Shape] = shape
+        def __init__(self, shape: tuple[*Shape]):
+            self._shape: tuple[*Shape] = shape
 
-        def get_shape(self) -> Tuple[*Shape]:
+        def get_shape(self) -> tuple[*Shape]:
             return self._shape
 
     shape = (Height(480), Width(640))
@@ -4089,8 +4089,8 @@ Type Variable Tuples Must Always be Unpacked
 """"""""""""""""""""""""""""""""""""""""""""
 
 Note that in the previous example, the ``shape`` argument to ``__init__``
-was annotated as ``Tuple[*Shape]``. Why is this necessary - if ``Shape``
-behaves like ``Tuple[T1, T2, ...]``, couldn't we have annotated the ``shape``
+was annotated as ``tuple[*Shape]``. Why is this necessary - if ``Shape``
+behaves like ``tuple[T1, T2, ...]``, couldn't we have annotated the ``shape``
 argument as ``Shape`` directly?
 
 This is, in fact, deliberately not possible: type variable tuples must
@@ -4099,25 +4099,9 @@ for two reasons:
 
 * To avoid potential confusion about whether to use a type variable tuple
   in a packed or unpacked form ("Hmm, should I write '``-> Shape``',
-  or '``-> Tuple[Shape]``', or '``-> Tuple[*Shape]``'...?")
+  or '``-> tuple[Shape]``', or '``-> tuple[*Shape]``'...?")
 * To improve readability: the star also functions as an explicit visual
   indicator that the type variable tuple is not a normal type variable.
-
-``Unpack`` for Backwards Compatibility
-""""""""""""""""""""""""""""""""""""""
-
-Note that the use of the star operator in this context requires a grammar change,
-and is therefore available only in new versions of Python. To enable use of type
-variable tuples in older versions of Python, we introduce the ``Unpack`` type
-operator that can be used in place of the star operator:
-
-::
-
-  # Unpacking using the star operator in new versions of Python
-  class Array(Generic[*Shape]): ...
-
-  # Unpacking using ``Unpack`` in older versions of Python
-  class Array(Generic[Unpack[Shape]]): ...
 
 Variance, Type Constraints and Type Bounds: Not (Yet) Supported
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -4136,17 +4120,17 @@ Type Variable Tuple Equality
 
 If the same ``TypeVarTuple`` instance is used in multiple places in a signature
 or class, a valid type inference might be to bind the ``TypeVarTuple`` to
-a ``Tuple`` of a ``Union`` of types:
+a ``tuple`` of a union of types:
 
 ::
 
-  def foo(arg1: Tuple[*Ts], arg2: Tuple[*Ts]): ...
+  def foo(arg1: tuple[*Ts], arg2: tuple[*Ts]): ...
 
   a = (0,)
   b = ('0',)
-  foo(a, b)  # Can Ts be bound to Tuple[int | str]?
+  foo(a, b)  # Can Ts be bound to tuple[int | str]?
 
-We do *not* allow this; type unions may *not* appear within the ``Tuple``.
+We do *not* allow this; type unions may *not* appear within the ``tuple``.
 If a type variable tuple appears in multiple places in a signature,
 the types must match exactly (the list of type parameters must be the same
 length, and the type parameters themselves must be identical):
@@ -4212,11 +4196,11 @@ Normal ``TypeVar`` instances can also be prefixed and/or suffixed:
 
     def prefix_tuple(
         x: T,
-        y: Tuple[*Ts]
-    ) -> Tuple[T, *Ts]: ...
+        y: tuple[*Ts]
+    ) -> tuple[T, *Ts]: ...
 
     z = prefix_tuple(x=0, y=(True, 'a'))
-    # Inferred type of z is Tuple[int, bool, str]
+    # Inferred type of z is tuple[int, bool, str]
 
 Unpacking Tuple Types
 ^^^^^^^^^^^^^^^^^^^^^
@@ -4231,20 +4215,20 @@ Unpacking Concrete Tuple Types
 """"""""""""""""""""""""""""""
 
 Unpacking a concrete tuple type is analogous to unpacking a tuple of
-values at runtime. ``Tuple[int, *Tuple[bool, bool], str]`` is
-equivalent to ``Tuple[int, bool, bool, str]``.
+values at runtime. ``tuple[int, *tuple[bool, bool], str]`` is
+equivalent to ``tuple[int, bool, bool, str]``.
 
 Unpacking Unbounded Tuple Types
 """""""""""""""""""""""""""""""
 
 Unpacking an unbounded tuple preserves the unbounded tuple as it is.
-That is, ``*Tuple[int, ...]`` remains ``*Tuple[int, ...]``; there's no
-simpler form. This enables us to specify types such as ``Tuple[int,
-*Tuple[str, ...], str]`` - a tuple type where the first element is
+That is, ``*tuple[int, ...]`` remains ``*tuple[int, ...]``; there's no
+simpler form. This enables us to specify types such as ``tuple[int,
+*tuple[str, ...], str]`` - a tuple type where the first element is
 guaranteed to be of type ``int``, the last element is guaranteed to be
 of type ``str``, and the elements in the middle are zero or more
-elements of type ``str``. Note that ``Tuple[*Tuple[int, ...]]`` is
-equivalent to ``Tuple[int, ...]``.
+elements of type ``str``. Note that ``tuple[*tuple[int, ...]]`` is
+equivalent to ``tuple[int, ...]``.
 
 Unpacking unbounded tuples is also useful in function signatures where
 we don't care about the exact elements and don't want to define an
@@ -4253,7 +4237,7 @@ unnecessary ``TypeVarTuple``:
 ::
 
     def process_batch_channels(
-        x: Array[Batch, *Tuple[Any, ...], Channels]
+        x: Array[Batch, *tuple[Any, ...], Channels]
     ) -> None:
         ...
 
@@ -4266,7 +4250,7 @@ unnecessary ``TypeVarTuple``:
     process_batch_channels(z)  # Error: Expected Channels.
 
 
-We can also pass a ``*Tuple[int, ...]`` wherever a ``*Ts`` is
+We can also pass a ``*tuple[int, ...]`` wherever a ``*Ts`` is
 expected. This is useful when we have particularly dynamic code and
 cannot state the precise number of dimensions or the precise types for
 each of the dimensions. In those cases, we can smoothly fall back to
@@ -4274,7 +4258,7 @@ an unbounded tuple:
 
 ::
 
-    y: Array[*Tuple[Any, ...]] = read_from_file()
+    y: Array[*tuple[Any, ...]] = read_from_file()
 
     def expect_variadic_array(
         x: Array[Batch, *Shape]
@@ -4288,15 +4272,15 @@ an unbounded tuple:
 
     expect_precise_array(y)  # OK
 
-``Array[*Tuple[Any, ...]]`` stands for an array with an arbitrary
+``Array[*tuple[Any, ...]]`` stands for an array with an arbitrary
 number of dimensions of type ``Any``. This means that, in the call to
 ``expect_variadic_array``, ``Batch`` is bound to ``Any`` and ``Shape``
-is bound to ``Tuple[Any, ...]``. In the call to
+is bound to ``tuple[Any, ...]``. In the call to
 ``expect_precise_array``, the variables ``Batch``, ``Height``,
 ``Width``, and ``Channels`` are all bound to ``Any``.
 
 This allows users to handle dynamic code gracefully while still
-explicitly marking the code as unsafe (by using ``y: Array[*Tuple[Any,
+explicitly marking the code as unsafe (by using ``y: Array[*tuple[Any,
 ...]]``).  Otherwise, users would face noisy errors from the type
 checker every time they tried to use the variable ``y``, which would
 hinder them when migrating a legacy code base to use ``TypeVarTuple``.
@@ -4310,8 +4294,8 @@ Not Allowed_>`_ unpacking may appear in a tuple:
 
 ::
 
-    x: Tuple[int, *Ts, str, *Ts2]  # Error
-    y: Tuple[int, *Tuple[int, ...], str, *Tuple[str, ...]]  # Error
+    x: tuple[int, *Ts, str, *Ts2]  # Error
+    y: tuple[int, *tuple[int, ...], str, *tuple[str, ...]]  # Error
 
 
 ``*args`` as a Type Variable Tuple
@@ -4329,13 +4313,13 @@ individual arguments become the types in the type variable tuple:
 
     Ts = TypeVarTuple('Ts')
 
-    def args_to_tuple(*args: *Ts) -> Tuple[*Ts]: ...
+    def args_to_tuple(*args: *Ts) -> tuple[*Ts]: ...
 
-    args_to_tuple(1, 'a')  # Inferred type is Tuple[int, str]
+    args_to_tuple(1, 'a')  # Inferred type is tuple[int, str]
 
-In the above example, ``Ts`` is bound to ``Tuple[int, str]``. If no
+In the above example, ``Ts`` is bound to ``tuple[int, str]``. If no
 arguments are passed, the type variable tuple behaves like an empty
-tuple, ``Tuple[()]``.
+tuple, ``tuple[()]``.
 
 As usual, we can unpack any tuple types. For example, by using a type
 variable tuple inside a tuple of other types, we can refer to prefixes
@@ -4344,7 +4328,7 @@ or suffixes of the variadic argument list. For example:
 ::
 
     # os.execle takes arguments 'path, arg0, arg1, ..., env'
-    def execle(path: str, *args: *Tuple[*Ts, Env]) -> None: ...
+    def execle(path: str, *args: *tuple[*Ts, Env]) -> None: ...
 
 Note that this is different to
 
@@ -4361,7 +4345,7 @@ more values of type ``int``:
 
 ::
 
-    def foo(*args: *Tuple[int, ...]) -> None: ...
+    def foo(*args: *tuple[int, ...]) -> None: ...
 
     # equivalent to:
     def foo(*args: int) -> None: ...
@@ -4372,14 +4356,14 @@ zero or more ``str`` values, and a ``str`` at the end:
 
 ::
 
-    def foo(*args: *Tuple[int, *Tuple[str, ...], str]) -> None: ...
+    def foo(*args: *tuple[int, *tuple[str, ...], str]) -> None: ...
 
 For completeness, we mention that unpacking a concrete tuple allows us
 to specify ``*args`` of a fixed number of heterogeneous types:
 
 ::
 
-    def foo(*args: *Tuple[int, str]) -> None: ...
+    def foo(*args: *tuple[int, str]) -> None: ...
 
     foo(1, "hello")  # OK
 
@@ -4392,13 +4376,13 @@ instance is *not* allowed:
     def foo(*args: Ts): ...  # NOT valid
 
 ``*args`` is the only case where an argument can be annotated as ``*Ts`` directly;
-other arguments should use ``*Ts`` to parameterise something else, e.g. ``Tuple[*Ts]``.
-If ``*args`` itself is annotated as ``Tuple[*Ts]``, the old behaviour still applies:
-all arguments must be a ``Tuple`` parameterised with the same types.
+other arguments should use ``*Ts`` to parameterise something else, e.g. ``tuple[*Ts]``.
+If ``*args`` itself is annotated as ``tuple[*Ts]``, the old behaviour still applies:
+all arguments must be a ``tuple`` parameterised with the same types.
 
 ::
 
-    def foo(*args: Tuple[*Ts]): ...
+    def foo(*args: tuple[*Ts]): ...
 
     foo((0,), (1,))    # Valid
     foo((0,), (1, 2))  # Error
@@ -4425,7 +4409,7 @@ Type variable tuples can also be used in the arguments section of a
       def __init__(
         self,
         target: Callable[[*Ts], None],
-        args: Tuple[*Ts],
+        args: tuple[*Ts],
       ) -> None: ...
 
     def func(arg1: int, arg2: str) -> None: ...
@@ -4440,7 +4424,7 @@ to the type variable tuple:
 
     T = TypeVar('T')
 
-    def foo(f: Callable[[int, *Ts, T], Tuple[T, *Ts]]): ...
+    def foo(f: Callable[[int, *Ts, T], tuple[T, *Ts]]): ...
 
 The behavior of a Callable containing an unpacked item, whether the
 item is a ``TypeVarTuple`` or a tuple type, is to treat the elements
@@ -4451,26 +4435,26 @@ is treated as the type of the function:
 
     def foo(*args: *Ts) -> None: ...
 
-``Callable[[int, *Ts, T], Tuple[T, *Ts]]`` is treated as the type of
+``Callable[[int, *Ts, T], tuple[T, *Ts]]`` is treated as the type of
 the function:
 
 ::
 
-    def foo(*args: *Tuple[int, *Ts, T]) -> Tuple[T, *Ts]: ...
+    def foo(*args: *tuple[int, *Ts, T]) -> tuple[T, *Ts]: ...
 
 Behaviour when Type Parameters are not Specified
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When a generic class parameterised by a type variable tuple is used without
 any type parameters, it behaves as if the type variable tuple was
-substituted with ``Tuple[Any, ...]``:
+substituted with ``tuple[Any, ...]``:
 
 ::
 
     def takes_any_array(arr: Array): ...
 
     # equivalent to:
-    def takes_any_array(arr: Array[*Tuple[Any, ...]]): ...
+    def takes_any_array(arr: Array[*tuple[Any, ...]]): ...
 
     x: Array[Height, Width]
     takes_any_array(x)  # Valid
@@ -4488,7 +4472,7 @@ This also works in the opposite direction:
     def takes_specific_array(arr: Array[Height, Width]): ...
 
     z: Array
-    # equivalent to Array[*Tuple[Any, ...]]
+    # equivalent to Array[*tuple[Any, ...]]
 
     takes_specific_array(z)
 
@@ -4507,17 +4491,16 @@ a similar way to regular type variables:
 
 ::
 
-    IntTuple = Tuple[int, *Ts]
-    NamedArray = Tuple[str, Array[*Ts]]
+    IntTuple = tuple[int, *Ts]
+    NamedArray = tuple[str, Array[*Ts]]
 
-    IntTuple[float, bool]  # Equivalent to Tuple[int, float, bool]
-    NamedArray[Height]     # Equivalent to Tuple[str, Array[Height]]
+    IntTuple[float, bool]  # Equivalent to tuple[int, float, bool]
+    NamedArray[Height]     # Equivalent to tuple[str, Array[Height]]
 
 As this example shows, all type parameters passed to the alias are
 bound to the type variable tuple.
 
-Importantly for our original ``Array`` example (see `Summary Examples`_), this
-allows us to define convenience aliases for arrays of a fixed shape
+This allows us to define convenience aliases for arrays of a fixed shape
 or datatype:
 
 ::
@@ -4537,11 +4520,11 @@ tuple in the alias is set empty:
 
 ::
 
-    IntTuple[()]    # Equivalent to Tuple[int]
-    NamedArray[()]  # Equivalent to Tuple[str, Array[()]]
+    IntTuple[()]    # Equivalent to tuple[int]
+    NamedArray[()]  # Equivalent to tuple[str, Array[()]]
 
 If the type parameter list is omitted entirely, the unspecified type
-variable tuples are treated as ``Tuple[Any, ...]`` (similar to
+variable tuples are treated as ``tuple[Any, ...]`` (similar to
 `Behaviour when Type Parameters are not Specified`_):
 
 ::
@@ -4561,13 +4544,13 @@ Normal ``TypeVar`` instances can also be used in such aliases:
 ::
 
     T = TypeVar('T')
-    Foo = Tuple[T, *Ts]
+    Foo = tuple[T, *Ts]
 
-    # T bound to str, Ts to Tuple[int]
+    # T bound to str, Ts to tuple[int]
     Foo[str, int]
-    # T bound to float, Ts to Tuple[()]
+    # T bound to float, Ts to tuple[()]
     Foo[float]
-    # T bound to Any, Ts to an Tuple[Any, ...]
+    # T bound to Any, Ts to an tuple[Any, ...]
     Foo
 
 
@@ -4590,22 +4573,22 @@ First, type arguments to generic aliases can be variadic. For example, a
     Ts1 = TypeVar('Ts1')
     Ts2 = TypeVar('Ts2')
 
-    IntTuple = Tuple[int, *Ts1]
+    IntTuple = tuple[int, *Ts1]
     IntFloatTuple = IntTuple[float, *Ts2]  # Valid
 
-Here, ``*Ts1`` in the ``IntTuple`` alias is bound to ``Tuple[float, *Ts2]``,
+Here, ``*Ts1`` in the ``IntTuple`` alias is bound to ``tuple[float, *Ts2]``,
 resulting in an alias ``IntFloatTuple`` equivalent to
-``Tuple[int, float, *Ts2]``.
+``tuple[int, float, *Ts2]``.
 
 Unpacked arbitrary-length tuples can also be used as type arguments, with
 similar effects:
 
 ::
 
-    IntFloatsTuple = IntTuple[*Tuple[float, ...]]  # Valid
+    IntFloatsTuple = IntTuple[*tuple[float, ...]]  # Valid
 
-Here, ``*Ts1`` is bound to ``*Tuple[float, ...]``, resulting in
-``IntFloatsTuple`` being equivalent to ``Tuple[int, *Tuple[float, ...]]``: a tuple
+Here, ``*Ts1`` is bound to ``*tuple[float, ...]``, resulting in
+``IntFloatsTuple`` being equivalent to ``tuple[int, *tuple[float, ...]]``: a tuple
 consisting of an ``int`` then zero or more ``float``\s.
 
 
@@ -4619,14 +4602,14 @@ themselves variadic. For example:
 
     T = TypeVar('T')
 
-    IntTuple = Tuple[int, T]
+    IntTuple = tuple[int, T]
 
     IntTuple[str]                 # Valid
     IntTuple[*Ts]                 # NOT valid
-    IntTuple[*Tuple[float, ...]]  # NOT valid
+    IntTuple[*tuple[float, ...]]  # NOT valid
 
 Here, ``IntTuple`` is a *non*-variadic generic alias that takes exactly one
-type argument. Hence, it cannot accept ``*Ts`` or ``*Tuple[float, ...]`` as type
+type argument. Hence, it cannot accept ``*Ts`` or ``*tuple[float, ...]`` as type
 arguments, because they represent an arbitrary number of types.
 
 
@@ -4639,10 +4622,10 @@ In `Aliases`_, we briefly mentioned that aliases can be generic in both
 ::
 
     T = TypeVar('T')
-    Foo = Tuple[T, *Ts]
+    Foo = tuple[T, *Ts]
 
-    Foo[str, int]         # T bound to str, Ts to Tuple[int]
-    Foo[str, int, float]  # T bound to str, Ts to Tuple[int, float]
+    Foo[str, int]         # T bound to str, Ts to tuple[int]
+    Foo[str, int, float]  # T bound to str, Ts to tuple[int, float]
 
 In accordance with `Multiple Type Variable Tuples: Not Allowed`_, at most one
 ``TypeVarTuple`` may appear in the type parameters to an alias. However, a
@@ -4655,9 +4638,9 @@ both before and after:
     T2 = TypeVar('T2')
     T3 = TypeVar('T3')
 
-    Tuple[*Ts, T1, T2]      # Valid
-    Tuple[T1, T2, *Ts]      # Valid
-    Tuple[T1, *Ts, T2, T3]  # Valid
+    tuple[*Ts, T1, T2]      # Valid
+    tuple[T1, T2, *Ts]      # Valid
+    tuple[T1, *Ts, T2, T3]  # Valid
 
 In order to substitute these type variables with supplied type arguments,
 any type variables at the beginning or end of the type parameter list first
@@ -4666,16 +4649,16 @@ to the ``TypeVarTuple``:
 
 ::
 
-    Shrubbery = Tuple[*Ts, T1, T2]
+    Shrubbery = tuple[*Ts, T1, T2]
 
-    Shrubbery[str, bool]              # T2=bool,  T1=str,   Ts=Tuple[()]
-    Shrubbery[str, bool, float]       # T2=float, T1=bool,  Ts=Tuple[str]
-    Shrubbery[str, bool, float, int]  # T2=int,   T1=float, Ts=Tuple[str, bool]
+    Shrubbery[str, bool]              # T2=bool,  T1=str,   Ts=tuple[()]
+    Shrubbery[str, bool, float]       # T2=float, T1=bool,  Ts=tuple[str]
+    Shrubbery[str, bool, float, int]  # T2=int,   T1=float, Ts=tuple[str, bool]
 
-    Ptang = Tuple[T1, *Ts, T2, T3]
+    Ptang = tuple[T1, *Ts, T2, T3]
 
-    Ptang[str, bool, float]       # T1=str, T3=float, T2=bool,  Ts=Tuple[()]
-    Ptang[str, bool, float, int]  # T1=str, T3=int,   T2=float, Ts=Tuple[bool]
+    Ptang[str, bool, float]       # T1=str, T3=float, T2=bool,  Ts=tuple[()]
+    Ptang[str, bool, float, int]  # T1=str, T3=int,   T2=float, Ts=tuple[bool]
        
 Note that the minimum number of type arguments in such cases is set by
 the number of ``TypeVar``\s:
@@ -4694,18 +4677,18 @@ as a type argument to an alias consisting of both ``TypeVar``\s and a
 
 ::
 
-    Elderberries = Tuple[*Ts, T1]
-    Hamster = Elderberries[*Tuple[int, ...]]  # valid
+    Elderberries = tuple[*Ts, T1]
+    Hamster = Elderberries[*tuple[int, ...]]  # valid
 
 In such cases, the arbitrary-length tuple is split between the ``TypeVar``\s
 and the ``TypeVarTuple``. We assume the arbitrary-length tuple contains
 at least as many items as there are ``TypeVar``\s, such that individual
 instances of the inner type - here ``int`` - are bound to any ``TypeVar``\s
-present. The 'rest' of the arbitrary-length tuple - here ``*Tuple[int, ...]``,
+present. The 'rest' of the arbitrary-length tuple - here ``*tuple[int, ...]``,
 since a tuple of arbitrary length minus two items is still arbitrary-length -
 is bound to the ``TypeVarTuple``.
 
-Here, therefore, ``Hamster`` is equivalent to ``Tuple[*Tuple[int, ...], int]``:
+Here, therefore, ``Hamster`` is equivalent to ``tuple[*tuple[int, ...], int]``:
 a tuple consisting of zero or more ``int``\s, then a final ``int``.
 
 Of course, such splitting only occurs if necessary. For example, if we instead
@@ -4713,21 +4696,21 @@ did:
 
 ::
 
-   Elderberries[*Tuple[int, ...], str]
+   Elderberries[*tuple[int, ...], str]
 
 Then splitting would not occur; ``T1`` would be bound to ``str``, and
-``Ts`` to ``*Tuple[int, ...]``.
+``Ts`` to ``*tuple[int, ...]``.
 
 In particularly awkward cases, a ``TypeVarTuple`` may consume both a type
 *and* a part of an arbitrary-length tuple type:
 
 ::
 
-    Elderberries[str, *Tuple[int, ...]]
+    Elderberries[str, *tuple[int, ...]]
 
 Here, ``T1`` is bound to ``int``, and ``Ts`` is bound to
-``Tuple[str, *Tuple[int, ...]]``. This expression is therefore equivalent to
-``Tuple[str, *Tuple[int, ...], int]``: a tuple consisting of a ``str``, then
+``tuple[str, *tuple[int, ...]]``. This expression is therefore equivalent to
+``tuple[str, *tuple[int, ...], int]``: a tuple consisting of a ``str``, then
 zero or more ``int``\s, ending with an ``int``.
 
 
@@ -4743,7 +4726,7 @@ true of ``TypeVarTuple``\s in the argument list:
     Ts1 = TypeVarTuple('Ts1')
     Ts2 = TypeVarTuple('Ts2')
 
-    Camelot = Tuple[T, *Ts1]
+    Camelot = tuple[T, *Ts1]
     Camelot[*Ts2]  # NOT valid
 
 This is not possible because, unlike in the case of an unpacked arbitrary-length
