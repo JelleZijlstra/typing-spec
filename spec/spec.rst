@@ -125,9 +125,19 @@ equivalent to ``type(None)``.
 Type aliases
 ------------
 
-Type aliases are defined by simple variable assignments::
+(See :pep:`613` for the introduction of ``TypeAlias``.)
+
+Type aliases may be defined by simple variable assignments::
 
   Url = str
+
+  def retry(url: Url, retry_count: int) -> None: ...
+
+Or by using ``typing.TypeAlias``::
+
+  from typing import TypeAlias
+
+  Url: TypeAlias = str
 
   def retry(url: Url, retry_count: int) -> None: ...
 
@@ -164,6 +174,42 @@ This is equivalent to::
     def dilate(v: Iterable[tuple[T, T]], scale: T) -> Iterable[tuple[T, T]]:
         return ((x * scale, y * scale) for x, y in v)
     vec: Iterable[tuple[float, float]] = []
+
+The explicit alias declaration syntax with ``TypeAlias`` clearly differentiates between the three
+possible kinds of assignments: typed global expressions, untyped global
+expressions, and type aliases. This avoids the existence of assignments that
+break type checking when an annotation is added, and avoids classifying the
+nature of the assignment based on the type of the value.
+
+Implicit syntax (pre-existing):
+
+::
+
+  x = 1  # untyped global expression
+  x: int = 1  # typed global expression
+
+  x = int  # type alias
+  x: Type[int] = int  # typed global expression
+
+
+Explicit syntax:
+
+::
+
+  x = 1  # untyped global expression
+  x: int = 1  # typed global expression
+
+  x = int  # untyped global expression (see note below)
+  x: Type[int] = int  # typed global expression
+
+  x: TypeAlias = int  # type alias
+  x: TypeAlias = "MyClass"  # type alias
+
+
+Note: The examples above illustrate implicit and explicit alias declarations in
+isolation. For the sake of backwards compatibility, type checkers should support
+both simultaneously, meaning an untyped global expression ``x = int`` will
+still be considered a valid type alias.
 
 
 Callable
