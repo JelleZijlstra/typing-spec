@@ -3538,6 +3538,421 @@ don't expect clients to have to write lots of boilerplate code::
             ...
 
 
+ParamSpec
+---------
+
+(Originally specified by :pep:`612`.)
+
+``ParamSpec`` Variables
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Declaration
+""""""""""""
+
+A parameter specification variable is defined in a similar manner to how a
+normal type variable is defined with ``typing.TypeVar``.
+
+.. code-block::
+
+   from typing import ParamSpec
+   P = ParamSpec("P")         # Accepted
+   P = ParamSpec("WrongName") # Rejected because P =/= WrongName
+
+The runtime should accept ``bound``\ s and ``covariant`` and ``contravariant``
+arguments in the declaration just as ``typing.TypeVar`` does, but for now we
+will defer the standardization of the semantics of those options to a later PEP.
+
+Valid use locations
+"""""""""""""""""""
+
+Previously only a list of parameter arguments (``[A, B, C]``) or an ellipsis
+(signifying "undefined parameters") were acceptable as the first "argument" to
+``typing.Callable`` .  We now augment that with two new options: a parameter
+specification variable (``Callable[P, int]``\ ) or a concatenation on a
+parameter specification variable (``Callable[Concatenate[int, P], int]``\ ).
+
+.. code-block::
+
+   callable ::= Callable "[" parameters_expression, type_expression "]"
+
+   parameters_expression ::=
+     | "..."
+     | "[" [ type_expression ("," type_expression)* ] "]"
+     | parameter_specification_variable
+     | concatenate "["
+                      type_expression ("," type_expression)* ","
+                      parameter_specification_variable
+                   "]"
+
+where ``parameter_specification_variable`` is a ``typing.ParamSpec`` variable,
+declared in the manner as defined above, and ``concatenate`` is
+``typing.Concatenate``.
+
+As before, ``parameters_expression``\ s by themselves are not acceptable in
+places where a type is expected
+
+.. code-block::
+
+   def foo(x: P) -> P: ...                           # Rejected
+   def foo(x: Concatenate[int, P]) -> int: ...       # Rejected
+   def foo(x: typing.List[P]) -> None: ...           # Rejected
+   def foo(x: Callable[[int, str], P]) -> None: ...  # Rejected
+
+
+User-Defined Generic Classes
+""""""""""""""""""""""""""""
+
+Just as defining a class as inheriting from ``Generic[T]`` makes a class generic
+for a single parameter (when ``T`` is a ``TypeVar``\ ), defining a class as
+inheriting from ``Generic[P]`` makes a class generic on
+``parameters_expression``\ s (when ``P`` is a ``ParamSpec``).
+
+.. code-block::
+
+   T = TypeVar("T")
+   P_2 = ParamSpec("P_2")
+
+   class X(Generic[T, P]):
+     f: Callable[P, int]
+     x: T
+
+   def f(x: X[int, P_2]) -> str: ...                    # Accepted
+   def f(x: X[int, Concatenate[int, P_2]]) -> str: ...  # Accepted
+   def f(x: X[int, [int, bool]]) -> str: ...            # Accepted
+   def f(x: X[int, ...]) -> str: ...                    # Accepted
+   def f(x: X[int, int]) -> str: ...                    # Rejected
+
+By the rules defined above, spelling a concrete instance of a class generic
+with respect to only a single ``ParamSpec`` would require unsightly double
+brackets.  For aesthetic purposes we allow these to be omitted.
+
+.. code-block::
+
+   class Z(Generic[P]):
+     f: Callable[P, int]
+
+   def f(x: Z[[int, str, bool]]) -> str: ...   # Accepted
+   def f(x: Z[int, str, bool]) -> str: ...     # Equivalent
+
+   # Both Z[[int, str, bool]] and Z[int, str, bool] express this:
+   class Z_instantiated:
+     f: Callable[[int, str, bool], int]
+
+Semantics
+"""""""""
+
+The inference rules for the return type of a function invocation whose signature
+contains a ``ParamSpec`` variable are analogous to those around
+evaluating ones with ``TypeVar``\ s.
+
+.. code-block::
+
+   def changes_return_type_to_str(x: Callable[P, int]) -> Callable[P, str]: ...
+
+   def returns_int(a: str, b: bool) -> int: ...
+
+   f = changes_return_type_to_str(returns_int) # f should have the type:
+                                               # (a: str, b: bool) -> str
+
+   f("A", True)               # Accepted
+   f(a="A", b=True)           # Accepted
+   f("A", "A")                # Rejected
+
+   expects_str(f("A", True))  # Accepted
+   expects_int(f("A", True))  # Rejected
+
+Just as with traditional ``TypeVars``\ , a user may include the same
+``ParamSpec`` multiple times in the arguments of the same function,
+to indicate a dependency between multiple arguments.  In these cases a type
+checker may choose to solve to a common behavioral supertype (i.e. a set of
+parameters for which all of the valid calls are valid in both of the subtypes),
+but is not obligated to do so.
+
+.. code-block::
+
+   P = ParamSpec("P")
+
+   def foo(x: Callable[P, int], y: Callable[P, int]) -> Callable[P, bool]: ...
+
+   def x_y(x: int, y: str) -> int: ...
+   def y_x(y: int, x: str) -> int: ...
+
+   foo(x_y, x_y)  # Should return (x: int, y: str) -> bool
+
+   foo(x_y, y_x)  # Could return (__a: int, __b: str) -> bool
+                  # This works because both callables have types that are
+                  # behavioral subtypes of Callable[[int, str], int]
+
+
+   def keyword_only_x(*, x: int) -> int: ...
+   def keyword_only_y(*, y: int) -> int: ...
+   foo(keyword_only_x, keyword_only_y) # Rejected
+
+The constructors of user-defined classes generic on ``ParamSpec``\ s should be
+evaluated in the same way.
+
+.. code-block::
+
+   U = TypeVar("U")
+
+   class Y(Generic[U, P]):
+     f: Callable[P, str]
+     prop: U
+
+     def __init__(self, f: Callable[P, str], prop: U) -> None:
+       self.f = f
+       self.prop = prop
+
+   def a(q: int) -> str: ...
+
+   Y(a, 1)   # Should resolve to Y[(q: int), int]
+   Y(a, 1).f # Should resolve to (q: int) -> str
+
+The semantics of ``Concatenate[X, Y, P]`` are that it represents the parameters
+represented by ``P`` with two positional-only parameters prepended.  This means
+that we can use it to represent higher order functions that add, remove or
+transform a finite number of parameters of a callable.
+
+.. code-block::
+
+   def bar(x: int, *args: bool) -> int: ...
+
+   def add(x: Callable[P, int]) -> Callable[Concatenate[str, P], bool]: ...
+
+   add(bar)       # Should return (__a: str, x: int, *args: bool) -> bool
+
+   def remove(x: Callable[Concatenate[int, P], int]) -> Callable[P, bool]: ...
+
+   remove(bar)    # Should return (*args: bool) -> bool
+
+   def transform(
+     x: Callable[Concatenate[int, P], int]
+   ) -> Callable[Concatenate[str, P], bool]: ...
+
+   transform(bar) # Should return (__a: str, *args: bool) -> bool
+
+This also means that while any function that returns an ``R`` can satisfy
+``typing.Callable[P, R]``, only functions that can be called positionally in
+their first position with a ``X`` can satisfy
+``typing.Callable[Concatenate[X, P], R]``.
+
+.. code-block::
+
+   def expects_int_first(x: Callable[Concatenate[int, P], int]) -> None: ...
+
+   @expects_int_first # Rejected
+   def one(x: str) -> int: ...
+
+   @expects_int_first # Rejected
+   def two(*, x: int) -> int: ...
+
+   @expects_int_first # Rejected
+   def three(**kwargs: int) -> int: ...
+
+   @expects_int_first # Accepted
+   def four(*args: int) -> int: ...
+
+There are still some classes of decorators still not supported with these
+features:
+
+* those that add/remove/change a **variable** number of parameters (for
+  example, ``functools.partial`` remains untypable even using ``ParamSpec``)
+* those that add/remove/change keyword-only parameters.
+
+The components of a ``ParamSpec``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``ParamSpec`` captures both positional and keyword accessible
+parameters, but there unfortunately is no object in the runtime that captures
+both of these together. Instead, we are forced to separate them into ``*args``
+and ``**kwargs``\ , respectively. This means we need to be able to split apart
+a single ``ParamSpec`` into these two components, and then bring
+them back together into a call.  To do this, we introduce ``P.args`` to
+represent the tuple of positional arguments in a given call and
+``P.kwargs`` to represent the corresponding ``Mapping`` of keywords to
+values.
+
+Valid use locations
+"""""""""""""""""""
+
+These "properties" can only be used as the annotated types for
+``*args`` and ``**kwargs``\ , accessed from a ParamSpec already in scope.
+
+.. code-block::
+
+   def puts_p_into_scope(f: Callable[P, int]) -> None:
+
+     def inner(*args: P.args, **kwargs: P.kwargs) -> None:      # Accepted
+       pass
+
+     def mixed_up(*args: P.kwargs, **kwargs: P.args) -> None:   # Rejected
+       pass
+
+     def misplaced(x: P.args) -> None:                          # Rejected
+       pass
+
+   def out_of_scope(*args: P.args, **kwargs: P.kwargs) -> None: # Rejected
+     pass
+
+
+Furthermore, because the default kind of parameter in Python (\ ``(x: int)``\ )
+may be addressed both positionally and through its name, two valid invocations
+of a ``(*args: P.args, **kwargs: P.kwargs)`` function may give different
+partitions of the same set of parameters. Therefore, we need to make sure that
+these special types are only brought into the world together, and are used
+together, so that our usage is valid for all possible partitions.
+
+.. code-block::
+
+   def puts_p_into_scope(f: Callable[P, int]) -> None:
+
+     stored_args: P.args                           # Rejected
+
+     stored_kwargs: P.kwargs                       # Rejected
+
+     def just_args(*args: P.args) -> None:         # Rejected
+       pass
+
+     def just_kwargs(**kwargs: P.kwargs) -> None:  # Rejected
+       pass
+
+
+Semantics
+"""""""""
+
+With those requirements met, we can now take advantage of the unique properties
+afforded to us by this set up:
+
+
+* Inside the function, ``args`` has the type ``P.args``\ , not
+  ``Tuple[P.args, ...]`` as would be with a normal annotation
+  (and likewise with the ``**kwargs``\ )
+
+  * This special case is necessary to encapsulate the heterogeneous contents
+    of the ``args``/``kwargs`` of a given call, which cannot be expressed
+    by an indefinite tuple/dictionary type.
+
+* A function of type ``Callable[P, R]`` can be called with ``(*args, **kwargs)``
+  if and only if ``args`` has the type ``P.args`` and ``kwargs`` has the type
+  ``P.kwargs``\ , and that those types both originated from the same function
+  declaration.
+* A function declared as ``def inner(*args: P.args, **kwargs: P.kwargs) -> X``
+  has type ``Callable[P, X]``.
+
+With these three properties, we now have the ability to fully type check
+parameter preserving decorators.
+
+.. code-block::
+
+   def decorator(f: Callable[P, int]) -> Callable[P, None]:
+
+     def foo(*args: P.args, **kwargs: P.kwargs) -> None:
+
+       f(*args, **kwargs)    # Accepted, should resolve to int
+
+       f(*kwargs, **args)    # Rejected
+
+       f(1, *args, **kwargs) # Rejected
+
+     return foo              # Accepted
+
+To extend this to include ``Concatenate``, we declare the following properties:
+
+* A function of type ``Callable[Concatenate[A, B, P], R]`` can only be
+  called with ``(a, b, *args, **kwargs)`` when ``args`` and ``kwargs`` are the
+  respective components of ``P``, ``a`` is of type ``A`` and ``b`` is of
+  type ``B``.
+* A function declared as
+  ``def inner(a: A, b: B, *args: P.args, **kwargs: P.kwargs) -> R``
+  has type ``Callable[Concatenate[A, B, P], R]``. Placing keyword-only
+  parameters between the ``*args`` and ``**kwargs`` is forbidden.
+
+.. code-block::
+
+   def add(f: Callable[P, int]) -> Callable[Concatenate[str, P], None]:
+
+     def foo(s: str, *args: P.args, **kwargs: P.kwargs) -> None:  # Accepted
+       pass
+
+     def bar(*args: P.args, s: str, **kwargs: P.kwargs) -> None:  # Rejected
+       pass
+
+     return foo                                                   # Accepted
+
+
+   def remove(f: Callable[Concatenate[int, P], int]) -> Callable[P, None]:
+
+     def foo(*args: P.args, **kwargs: P.kwargs) -> None:
+       f(1, *args, **kwargs) # Accepted
+
+       f(*args, 1, **kwargs) # Rejected
+
+       f(*args, **kwargs)    # Rejected
+
+     return foo
+
+Note that the names of the parameters preceding the ``ParamSpec``
+components are not mentioned in the resulting ``Concatenate``.  This means that
+these parameters can not be addressed via a named argument:
+
+.. code-block::
+
+   def outer(f: Callable[P, None]) -> Callable[P, None]:
+     def foo(x: int, *args: P.args, **kwargs: P.kwargs) -> None:
+       f(*args, **kwargs)
+
+     def bar(*args: P.args, **kwargs: P.kwargs) -> None:
+       foo(1, *args, **kwargs)   # Accepted
+       foo(x=1, *args, **kwargs) # Rejected
+
+     return bar
+
+.. _above:
+
+This is not an implementation convenience, but a soundness requirement.  If we
+were to allow that second calling style, then the following snippet would be
+problematic.
+
+.. code-block::
+
+   @outer
+   def problem(*, x: object) -> None:
+     pass
+
+   problem(x="uh-oh")
+
+Inside of ``bar``, we would get
+``TypeError: foo() got multiple values for argument 'x'``.  Requiring these
+concatenated arguments to be addressed positionally avoids this kind of problem,
+and simplifies the syntax for spelling these types. Note that this also why we
+have to reject signatures of the form
+``(*args: P.args, s: str, **kwargs: P.kwargs)``.
+
+If one of these prepended positional parameters contains a free ``ParamSpec``\ ,
+we consider that variable in scope for the purposes of extracting the components
+of that ``ParamSpec``.  That allows us to spell things like this:
+
+.. code-block::
+
+   def twice(f: Callable[P, int], *args: P.args, **kwargs: P.kwargs) -> int:
+     return f(*args, **kwargs) + f(*args, **kwargs)
+
+The type of ``twice`` in the above example is
+``Callable[Concatenate[Callable[P, int], P], int]``, where ``P`` is bound by the
+outer ``Callable``.  This has the following semantics:
+
+.. code-block::
+
+   def a_int_b_str(a: int, b: str) -> int:
+     pass
+
+   twice(a_int_b_str, 1, "A")       # Accepted
+
+   twice(a_int_b_str, b="A", a=1)   # Accepted
+
+   twice(a_int_b_str, "A", 1)       # Rejected
+
+
 Compatibility with other uses of function annotations
 =====================================================
 
