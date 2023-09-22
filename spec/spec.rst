@@ -589,8 +589,6 @@ and ``Iterable[T]`` are valid both as types and as base classes. For
 example, we can define a subclass of ``dict`` that specializes type
 arguments::
 
-  from typing import Optional
-
   class Node:
       ...
 
@@ -601,7 +599,7 @@ arguments::
       def pop(self, name: str) -> Node:
           return self[name].pop()
 
-      def lookup(self, name: str) -> Optional[Node]:
+      def lookup(self, name: str) -> Node | None:
           nodes = self.get(name)
           if nodes:
               return nodes[-1]
@@ -870,33 +868,25 @@ Union types
 -----------
 
 Since accepting a small, limited set of expected types for a single
-argument is common, there is a special factory called ``Union``.
+argument is common, the type system supports union types, created with the
+``|`` operator.
 Example::
 
-  from typing import Union
-
-  def handle_employees(e: Union[Employee, Sequence[Employee]]) -> None:
+  def handle_employees(e: Employee | Sequence[Employee]) -> None:
       if isinstance(e, Employee):
           e = [e]
       ...
 
-A type factored by ``Union[T1, T2, ...]`` is a supertype
+A type factored by ``T1 | T2 | ...`` is a supertype
 of all types ``T1``, ``T2``, etc., so that a value that
 is a member of one of these types is acceptable for an argument
-annotated by ``Union[T1, T2, ...]``.
+annotated by ``T1 | T2 | ...``.
 
 One common case of union types are *optional* types.  By default,
 ``None`` is an invalid value for any type, unless a default value of
 ``None`` has been provided in the function definition.  Examples::
 
-  def handle_employee(e: Union[Employee, None]) -> None: ...
-
-As a shorthand for ``Union[T1, None]`` you can write ``Optional[T1]``;
-for example, the above is equivalent to::
-
-  from typing import Optional
-
-  def handle_employee(e: Optional[Employee]) -> None: ...
+  def handle_employee(e: Employee | None) -> None: ...
 
 A past version of this specification allowed type checkers to assume an optional
 type when the default value is ``None``, as in this code::
@@ -905,7 +895,7 @@ type when the default value is ``None``, as in this code::
 
 This would have been treated as equivalent to::
 
-  def handle_employee(e: Optional[Employee] = None) -> None: ...
+  def handle_employee(e: Employee | None = None) -> None: ...
 
 This is no longer the recommended behavior. Type checkers should move
 towards requiring the optional type to be made explicit.
@@ -928,17 +918,16 @@ for a variable. Example::
           return x * 2
 
 To allow precise typing in such situations, the user should use
-the ``Union`` type in conjunction with the ``enum.Enum`` class provided
+a union type in conjunction with the ``enum.Enum`` class provided
 by the standard library, so that type errors can be caught statically::
 
-  from typing import Union
   from enum import Enum
 
   class Empty(Enum):
       token = 0
   _empty = Empty.token
 
-  def func(x: Union[int, None, Empty] = _empty) -> int:
+  def func(x: int | None | Empty = _empty) -> int:
 
       boom = x * 42  # This fails type check
 
@@ -959,7 +948,7 @@ one value::
       timeout = 1
       error = 2
 
-  def process(response: Union[str, Reason] = '') -> str:
+  def process(response: str | Reason = '') -> str:
       if response is Reason.timeout:
           return 'TIMEOUT'
       elif response is Reason.error:
@@ -1102,14 +1091,14 @@ type checker will infer the correct type of the result::
 
 The value corresponding to ``type[C]`` must be an actual class object
 that's a subtype of ``C``, not a special form.  In other words, in the
-above example calling e.g. ``new_user(Union[BasicUser, ProUser])`` is
+above example calling e.g. ``new_user(BasicUser | ProUser)`` is
 rejected by the type checker (in addition to failing at runtime
 because you can't instantiate a union).
 
 Note that it is legal to use a union of classes as the parameter for
 ``type[]``, as in::
 
-  def new_non_team_user(user_class: type[Union[BasicUser, ProUser]]):
+  def new_non_team_user(user_class: type[BasicUser | ProUser]):
       user = new_user(user_class)
       ...
 
@@ -1783,15 +1772,15 @@ Protocols can be used to define flexible callback types that are hard
 specified by :pep:`484`, such as variadic, overloaded, and complex generic
 callbacks. They can be defined as protocols with a ``__call__`` member::
 
-  from typing import Optional, Protocol
+  from typing import Protocol
 
   class Combiner(Protocol):
       def __call__(self, *vals: bytes,
-                   maxlen: Optional[int] = None) -> list[bytes]: ...
+                   maxlen: int | None = None) -> list[bytes]: ...
 
-  def good_cb(*vals: bytes, maxlen: Optional[int] = None) -> list[bytes]:
+  def good_cb(*vals: bytes, maxlen: int | None = None) -> list[bytes]:
       ...
-  def bad_cb(*vals: bytes, maxitems: Optional[int]) -> list[bytes]:
+  def bad_cb(*vals: bytes, maxitems: int | None) -> list[bytes]:
       ...
 
   comb: Combiner = good_cb  # OK
@@ -1818,7 +1807,7 @@ subtyping relationships are subject to the following rules:
 
 Generic protocol types follow the same rules of variance as non-protocol
 types. Protocol types can be used in all contexts where any other types
-can be used, such as in ``Union``, ``ClassVar``, type variables bounds, etc.
+can be used, such as in unions, ``ClassVar``, type variables bounds, etc.
 Generic protocols follow the rules for generic abstract classes, except for
 using structural compatibility instead of compatibility defined by
 inheritance relationships.
@@ -1853,19 +1842,19 @@ corresponding protocols are *not imported*::
 Unions and intersections of protocols
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Union`` of protocol classes behaves the same way as for non-protocol
+Unions of protocol classes behaves the same way as for non-protocol
 classes. For example::
 
-  from typing import Union, Optional, Protocol
+  from typing importt Protocol
 
   class Exitable(Protocol):
       def exit(self) -> int:
           ...
   class Quittable(Protocol):
-      def quit(self) -> Optional[int]:
+      def quit(self) -> int | None:
           ...
 
-  def finish(task: Union[Exitable, Quittable]) -> int:
+  def finish(task: Exitable | Quittable) -> int:
       ...
   class DefaultJob:
       ...
@@ -1961,7 +1950,7 @@ aliases::
   T = TypeVar('T')
   class SizedIterable(Iterable[T], Sized, Protocol):
       pass
-  CompatReversible = Union[Reversible[T], SizedIterable[T]]
+  CompatReversible = Reversible[T] | SizedIterable[T]
 
 
 Modules as implementations of protocols
@@ -2102,11 +2091,9 @@ This description is more precise than would be possible using unions
 (which cannot express the relationship between the argument and return
 types)::
 
-  from typing import Union
-
   class bytes:
       ...
-      def __getitem__(self, a: Union[int, slice]) -> Union[int, bytes]: ...
+      def __getitem__(self, a: int | slice) -> int | bytes: ...
 
 Another example where ``@overload`` comes in handy is the type of the
 builtin ``map()`` function, which takes a different number of
@@ -2252,14 +2239,14 @@ Shortening unions of literals
 Literals are parameterized with one or more values. When a Literal is
 parameterized with more than one value, it's treated as exactly equivalent
 to the union of those types. That is, ``Literal[v1, v2, v3]`` is equivalent
-to ``Union[Literal[v1], Literal[v2], Literal[v3]]``.
+to ``Literal[v1] | Literal[v2] | Literal[v3]``.
 
 This shortcut helps make writing signatures for functions that accept
 many different literals more ergonomic — for example, functions like
 ``open(...)``::
 
    # Note: this is a simplification of the true type signature.
-   _PathType = Union[str, bytes, int]
+   _PathType = str | bytes | int
 
    @overload
    def open(path: _PathType,
@@ -2337,7 +2324,7 @@ This should be exactly equivalent to the following type::
 
 ...and also to the following type::
 
-    Optional[Literal[1, 2, 3, "foo", 5]]
+    Literal[1, 2, 3, "foo", 5] | None
 
 **Note:** String literal types like ``Literal["foo"]`` should subtype either
 bytes or unicode in the same way regular string literals do at runtime.
@@ -2563,7 +2550,7 @@ However, one important use case type checkers must take care to
 support is the ability to use a *fallback* when the user is not using literal
 types. For example, consider ``open``::
 
-   _PathType = Union[str, bytes, int]
+   _PathType = str | bytes | int
 
    @overload
    def open(path: _PathType,
@@ -2647,7 +2634,7 @@ values of the ``Status`` enum have already been exhausted::
         INVALID_DATA = 1
         FATAL_ERROR = 2
 
-    def parse_status(s: Union[str, Status]) -> None:
+    def parse_status(s: str | Status) -> None:
         if s is Status.SUCCESS:
             print("Success!")
         elif s is Status.INVALID_DATA:
@@ -2698,18 +2685,18 @@ involving Literal bools. For example, we can combine ``Literal[True]``,
 ``Literal[False]``, and overloads to construct "custom type guards"::
 
    @overload
-   def is_int_like(x: Union[int, List[int]]) -> Literal[True]: ...
+   def is_int_like(x: int | list[int]) -> Literal[True]: ...
    @overload
    def is_int_like(x: object) -> bool: ...
    def is_int_like(x): ...
 
-   vector: List[int] = [1, 2, 3]
+   vector: list[int] = [1, 2, 3]
    if is_int_like(vector):
        vector.append(3)
    else:
        vector.append("bad")   # This branch is inferred to be unreachable
 
-   scalar: Union[int, str]
+   scalar: int | str
    if is_int_like(scalar):
        scalar += 3      # Type checks: type of 'scalar' is narrowed to 'int'
    else:
@@ -3061,7 +3048,7 @@ Discussion:
   ``Dict``.  Example where this is relevant::
 
       class A(TypedDict):
-          x: Optional[int]
+          x: int | None
 
       class B(TypedDict):
           x: int
@@ -3251,7 +3238,7 @@ Similarly, an expression with a suitable literal type
 (:pep:`586`) can be used instead of a literal value::
 
    def get_value(movie: Movie,
-                 key: Literal['year', 'name']) -> Union[int, str]:
+                 key: Literal['year', 'name']) -> int | str:
        return movie[key]
 
 Type checkers are only expected to support actual string literals, not
@@ -3961,7 +3948,7 @@ collections (e.g. ``List``), types representing generic
 collection ABCs (e.g. ``Sequence``), and a small collection of
 convenience definitions.
 
-Note that special type constructs, such as ``Any``, ``Union``,
+Note that special type constructs, such as ``Any``,
 and type variables defined using ``TypeVar`` are only supported
 in the type annotation context, and ``Generic`` may only be used
 as a base class. All of these (except for unparameterized generics)
@@ -4086,7 +4073,7 @@ A few one-off types are defined that test for single special methods
 
 Convenience definitions:
 
-* Optional, defined by ``Optional[t] == Union[t, None]``
+* Optional, defined by ``Optional[t] == t | None``
 
 * Text, a simple alias for ``str`` in Python 3, for ``unicode`` in Python 2
 
@@ -4237,7 +4224,7 @@ there is a special case::
 
 Type checkers should not complain about this (despite the value
 ``None`` not matching the given type), nor should they change the
-inferred type to ``Optional[...]``.  The
+inferred type to ``... | None``.  The
 assumption here is that other code will ensure that the variable is
 given a value of the proper type, and all uses can assume that the
 variable has the given type.
@@ -4427,6 +4414,21 @@ as equivalent to the alias in the ``typing`` module. This includes:
 
 The generic aliases in the ``typing`` module are considered deprecated
 and type checkers may warn if they are used.
+
+``Union`` and ``Optional``
+--------------------------
+
+Before Python 3.10 (:pep:`604`), Python did not support the ``|`` operator
+for creating unions of types. Therefore, the ``typing.Union`` special form can also
+be used to create union types. Type checkers should treat the two forms as equivalent.
+
+In addition, the ``Optional`` special form provides a shortcut for a union with ``None``.
+
+Examples:
+
+* ``int | str`` is the same as ``Union[int, str]``
+* ``int | str | range`` is the same as ``Union[int, str, range]``
+* ``int | None`` is the same as ``Optional[int]`` and ``Union[int, None]``
 
 .. _mypy:
    http://mypy-lang.org
