@@ -1249,6 +1249,10 @@ to ``tuple[Any, ...]``. As well, a bare
   def apply_callbacks(cbs: list[Callable]) -> None:
       ...
 
+``Any`` can also be used as a base class. This can be useful for
+avoiding type checker errors with classes that can duck type anywhere or
+are highly dynamic.
+
 
 The ``NoReturn`` type
 ---------------------
@@ -1295,6 +1299,15 @@ and considered an error if it appears in other positions::
   bad2: NoReturn = None
   def bad3() -> list[NoReturn]:
       ...
+
+
+The ``Never`` type
+------------------
+
+Since Python 3.11, the ``typing`` module a primitive ``Never``. This represents
+the bottom type, a type that has no members. Type checkers are expected to treat
+this type as equivalent to ``NoReturn``, but it is explicitly also allowed in
+argument positions.
 
 
 The type of class objects
@@ -3063,6 +3076,10 @@ TypedDict definition conforms to the following rules:
 
 * Specifying a metaclass is not allowed.
 
+* TypedDicts may be made generic by adding ``Generic[T]`` among the
+  bases (or, in Python 3.12 and higher, by using the new
+  syntax for generic classes).
+
 An empty TypedDict can be created by only including ``pass`` in the
 body (if there is a docstring, ``pass`` can be omitted)::
 
@@ -3182,7 +3199,7 @@ The TypedDict ``XYZ`` has three items: ``x`` (type ``int``), ``y``
 (type ``str``), and ``z`` (type ``bool``).
 
 A TypedDict cannot inherit from both a TypedDict type and a
-non-TypedDict base class.
+non-TypedDict base class other than ``Generic``.
 
 Additional notes on TypedDict class inheritance:
 
