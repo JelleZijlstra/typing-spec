@@ -1249,6 +1249,10 @@ to ``tuple[Any, ...]``. As well, a bare
   def apply_callbacks(cbs: list[Callable]) -> None:
       ...
 
+``Any`` can also be used as a base class. This can be useful for
+avoiding type checker errors with classes that can duck type anywhere or
+are highly dynamic.
+
 
 The ``NoReturn`` type
 ---------------------
