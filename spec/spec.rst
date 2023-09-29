@@ -1297,6 +1297,15 @@ and considered an error if it appears in other positions::
       ...
 
 
+The ``Never`` type
+------------------
+
+Since Python 3.11, the ``typing`` module a primitive ``Never``. This represents
+the bottom type, a type that has no members. Type checkers are expected to treat
+this type as equivalent to ``NoReturn``, but it is explicitly also allowed in
+argument positions.
+
+
 The type of class objects
 -------------------------
 
