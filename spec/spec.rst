@@ -13,23 +13,27 @@ support for off-line type checkers such as mypy, as well as providing
 a standard notation that can be used by IDEs for code completion and
 refactoring.
 
-Non-goals
----------
+This specification is organized in the following main sections:
 
-While the typing module contains some building blocks for
-runtime type checking -- in particular the ``get_type_hints()``
-function -- third party packages would have to be developed to
-implement specific runtime type checking functionality, for example
-using decorators or metaclasses.  Using type hints for performance
-optimizations is left as an exercise for the reader.
+- :ref:`"Basics of the type system" <basics>` describes some basic concepts of the
+  type system.
+- :ref:`"Type system features" <type-system-features>` describes specific features of the type
+  system.
+- :ref:`"Interaction with Python features" <interaction-with-python>` describes how type checkers
+  should treat certain specific features of the language.
+- :ref:`"Communicating type information" <communicating-type>` describes mechanisms by which
+  information about types is shared among libraries and type
+  checkers.
+- :ref:`"Syntax alternatives" <syntax-alternatives>` describes several features that are expressed
+  with different syntax in older and newer Python versions.
 
-It should also be emphasized that **Python will remain a dynamically
-typed language, and there is no desire to ever make type hints
-mandatory, even by convention.**
+.. _basics:
 
+Basics of the type system
+=========================
 
 The meaning of annotations
-==========================
+--------------------------
 
 Any function without annotations should be treated as having the most
 general type possible, or ignored, by any type checker.  Functions
@@ -65,9 +69,8 @@ Type checkers are expected to attempt to infer as much information as
 necessary.  The minimum requirement is to handle the builtin
 decorators ``@property``, ``@staticmethod`` and ``@classmethod``.
 
-
-Type Definition Syntax
-======================
+Type definition syntax
+----------------------
 
 The syntax leverages :pep:`3107`-style annotations with a number of
 extensions described in sections below.  In its basic form, type
@@ -82,6 +85,29 @@ This states that the expected type of the ``name`` argument is
 Expressions whose type is a subtype of a specific argument type are
 also accepted for that argument.
 
+Definition of terms
+-------------------
+
+This section defines a few terms that may be used elsewhere in the specification.
+
+The definition of "MAY", "MUST", and "SHOULD", and "SHOULD NOT" are
+to be interpreted as described in :rfc:`2119`.
+
+"inline" - the types are part of the runtime code using :pep:`526` and
+:pep:`3107` syntax (the filename ends in ``.py``).
+
+"stubs" - files containing only type information, empty of runtime code
+(the filename ends in ``.pyi``).
+
+"Distributions" are the packaged files which are used to publish and distribute
+a release. (:pep:`426`)
+
+"Module" a file containing Python runtime code or stubbed type information.
+
+"Package" a directory or directories that namespace Python modules.
+(Note the distinction between packages and distributions.  While most
+distributions are named after the one package they install, some
+distributions install multiple packages.)
 
 Acceptable type hints
 ---------------------
@@ -114,6 +140,24 @@ below may be used: ``None``, ``Any``, ``Union``, ``Tuple``,
 from ``typing`` (e.g. ``Sequence`` and ``Dict``), type variables, and
 type aliases.
 
+Non-goals
+---------
+
+While the typing module contains some building blocks for
+runtime type checking -- in particular the ``get_type_hints()``
+function -- third party packages would have to be developed to
+implement specific runtime type checking functionality, for example
+using decorators or metaclasses.  Using type hints for performance
+optimizations is left as an exercise for the reader.
+
+It should also be emphasized that **Python will remain a dynamically
+typed language, and there is no desire to ever make type hints
+mandatory, even by convention.**
+
+.. _type-system-features:
+
+Type system features
+====================
 
 Using None
 ----------
@@ -1020,18 +1064,6 @@ new-style type parameters must come from an outer scope in this case.
         def method2[M](self, a: M, b: K) -> M | K: ...
 
 
-Special cases for subtyping
----------------------------
-
-Python's numeric types ``complex``, ``float`` and ``int`` are not
-subtypes of each other, but to support common use cases, the type
-system contains a straightforward shortcut:
-when an argument is annotated as having
-type ``float``, an argument of type ``int`` is acceptable; similar,
-for an argument annotated as having type ``complex``, arguments of
-type ``float`` or ``int`` are acceptable.
-
-
 Forward references
 ------------------
 
@@ -1467,8 +1499,8 @@ Don't expect a checker to understand obfuscations like
 ``"".join(reversed(sys.platform)) == "xunil"``.
 
 
-Runtime or type checking?
--------------------------
+``TYPE_CHECKING``
+-----------------
 
 Sometimes there's code that must be seen by a type checker (or other
 static analysis tools) but should not be executed.  For such
@@ -1491,83 +1523,6 @@ interpreter runtime.  In the variable annotation no quotes are needed.)
 
 This approach may also be useful to handle import cycles.
 
-
-Arbitrary argument lists and default argument values
-----------------------------------------------------
-
-Arbitrary argument lists can as well be type annotated,
-so that the definition::
-
-  def foo(*args: str, **kwds: int): ...
-
-is acceptable and it means that, e.g., all of the following
-represent function calls with valid types of arguments::
-
-  foo('a', 'b', 'c')
-  foo(x=1, y=2)
-  foo('', z=0)
-
-In the body of function ``foo``, the type of variable ``args`` is
-deduced as ``tuple[str, ...]`` and the type of variable ``kwds``
-is ``dict[str, int]``.
-
-In stubs it may be useful to declare an argument as having a default
-without specifying the actual default value.  For example::
-
-  def foo(x: AnyStr, y: AnyStr = ...) -> AnyStr: ...
-
-What should the default value look like?  Any of the options ``""``,
-``b""`` or ``None`` fails to satisfy the type constraint.
-
-In such cases the default value may be specified as a literal
-ellipsis, i.e. the above example is literally what you would write.
-
-
-Annotating generator functions and coroutines
----------------------------------------------
-
-The return type of generator functions can be annotated by
-the generic type ``Generator[yield_type, send_type,
-return_type]`` provided by ``typing.py`` module::
-
-  def echo_round() -> Generator[int, float, str]:
-      res = yield
-      while res:
-          res = yield round(res)
-      return 'OK'
-
-Coroutines introduced in :pep:`492` are annotated with the same syntax as
-ordinary functions. However, the return type annotation corresponds to the
-type of ``await`` expression, not to the coroutine type::
-
-  async def spam(ignored: int) -> str:
-      return 'spam'
-
-  async def foo() -> None:
-      bar = await spam(42)  # type is str
-
-The generic ABC ``collections.abc.Coroutine`` can be used
-to specify awaitables that also support
-``send()`` and ``throw()`` methods. The variance and order of type variables
-correspond to those of ``Generator``, namely ``Coroutine[T_co, T_contra, V_co]``,
-for example::
-
-  from collections.abc import Coroutine
-  c: Coroutine[list[str], str, int]
-  ...
-  x = c.send('hi')  # type is list[str]
-  async def bar() -> None:
-      x = await c  # type is int
-
-The generic ABCs ``Awaitable``,
-``AsyncIterable``, and ``AsyncIterator`` can be used for situations where more precise
-types cannot be specified::
-
-  def op() -> collections.abc.Awaitable[str]:
-      if cond:
-          return spam(42)
-      else:
-          return asyncio.Future(...)
 
 ``ClassVar``
 ------------
@@ -6660,30 +6615,6 @@ it should emit a diagnostic with the type of the argument. For example::
   x: int = 1
   reveal_type(x)  # Revealed type is "builtins.int"
 
-Compatibility with other uses of function annotations
-=====================================================
-
-A number of existing or potential use cases for function annotations
-exist, which are incompatible with type hinting.  These may confuse
-a static type checker.  However, since type hinting annotations have no
-runtime behavior (other than evaluation of the annotation expression and
-storing annotations in the ``__annotations__`` attribute of the function
-object), this does not make the program incorrect -- it just may cause
-a type checker to emit spurious warnings or errors.
-
-To mark portions of the program that should not be covered by type
-hinting, you can use one or more of the following:
-
-* a ``# type: ignore`` comment;
-
-* a ``@no_type_check`` decorator on a class or function;
-
-* a custom class or function decorator marked with
-  ``@no_type_check_decorator``.
-
-For more details see later sections.
-
-
 ``# type: ignore`` comments
 ---------------------------
 
@@ -6713,8 +6644,8 @@ If type hinting proves useful in general, a syntax for typing variables
 may be provided in a future Python version. (**UPDATE**: This syntax
 was added in Python 3.6 through :pep:`526`.)
 
-Casts
-=====
+``cast()``
+----------
 
 Occasionally the type checker may need a different kind of hint: the
 programmer may know that an expression is of a more constrained type
@@ -6742,8 +6673,8 @@ checker should blindly believe the programmer.  Also, casts can be used
 in expressions, while type comments only apply to assignments.
 
 
-NewType helper function
-=======================
+``NewType``
+-----------
 
 There are also situations where a programmer might want to avoid logical
 errors by creating simple classes. For example::
@@ -6804,9 +6735,130 @@ Both ``isinstance`` and ``issubclass``, as well as subclassing will fail
 for ``NewType('Derived', Base)`` since function objects don't support
 these operations.
 
+.. _interaction-with-python:
 
-Stub Files
-==========
+Interaction with Python features
+================================
+
+Special cases for subtyping
+---------------------------
+
+Python's numeric types ``complex``, ``float`` and ``int`` are not
+subtypes of each other, but to support common use cases, the type
+system contains a straightforward shortcut:
+when an argument is annotated as having
+type ``float``, an argument of type ``int`` is acceptable; similar,
+for an argument annotated as having type ``complex``, arguments of
+type ``float`` or ``int`` are acceptable.
+
+Arbitrary argument lists and default argument values
+----------------------------------------------------
+
+Arbitrary argument lists can as well be type annotated,
+so that the definition::
+
+  def foo(*args: str, **kwds: int): ...
+
+is acceptable and it means that, e.g., all of the following
+represent function calls with valid types of arguments::
+
+  foo('a', 'b', 'c')
+  foo(x=1, y=2)
+  foo('', z=0)
+
+In the body of function ``foo``, the type of variable ``args`` is
+deduced as ``tuple[str, ...]`` and the type of variable ``kwds``
+is ``dict[str, int]``.
+
+In stubs it may be useful to declare an argument as having a default
+without specifying the actual default value.  For example::
+
+  def foo(x: AnyStr, y: AnyStr = ...) -> AnyStr: ...
+
+What should the default value look like?  Any of the options ``""``,
+``b""`` or ``None`` fails to satisfy the type constraint.
+
+In such cases the default value may be specified as a literal
+ellipsis, i.e. the above example is literally what you would write.
+
+
+Annotating generator functions and coroutines
+---------------------------------------------
+
+The return type of generator functions can be annotated by
+the generic type ``Generator[yield_type, send_type,
+return_type]`` provided by ``typing.py`` module::
+
+  def echo_round() -> Generator[int, float, str]:
+      res = yield
+      while res:
+          res = yield round(res)
+      return 'OK'
+
+Coroutines introduced in :pep:`492` are annotated with the same syntax as
+ordinary functions. However, the return type annotation corresponds to the
+type of ``await`` expression, not to the coroutine type::
+
+  async def spam(ignored: int) -> str:
+      return 'spam'
+
+  async def foo() -> None:
+      bar = await spam(42)  # type is str
+
+The generic ABC ``collections.abc.Coroutine`` can be used
+to specify awaitables that also support
+``send()`` and ``throw()`` methods. The variance and order of type variables
+correspond to those of ``Generator``, namely ``Coroutine[T_co, T_contra, V_co]``,
+for example::
+
+  from collections.abc import Coroutine
+  c: Coroutine[list[str], str, int]
+  ...
+  x = c.send('hi')  # type is list[str]
+  async def bar() -> None:
+      x = await c  # type is int
+
+The generic ABCs ``Awaitable``,
+``AsyncIterable``, and ``AsyncIterator`` can be used for situations where more precise
+types cannot be specified::
+
+  def op() -> collections.abc.Awaitable[str]:
+      if cond:
+          return spam(42)
+      else:
+          return asyncio.Future(...)
+
+
+Compatibility with other uses of function annotations
+-----------------------------------------------------
+
+A number of existing or potential use cases for function annotations
+exist, which are incompatible with type hinting.  These may confuse
+a static type checker.  However, since type hinting annotations have no
+runtime behavior (other than evaluation of the annotation expression and
+storing annotations in the ``__annotations__`` attribute of the function
+object), this does not make the program incorrect -- it just may cause
+a type checker to emit spurious warnings or errors.
+
+To mark portions of the program that should not be covered by type
+hinting, you can use one or more of the following:
+
+* a ``# type: ignore`` comment;
+
+* a ``@no_type_check`` decorator on a class or function;
+
+* a custom class or function decorator marked with
+  ``@no_type_check_decorator``.
+
+For more details see earlier sections.
+
+.. _communicating-type:
+
+Communicating type information
+==============================
+
+Stub files
+----------
 
 Stub files are files containing type hints that are only for use by
 the type checker, not at runtime.  There are several use cases for
@@ -6876,7 +6928,7 @@ Additional notes on stub files:
   ``Any``.
 
 The Typeshed Repo
------------------
+^^^^^^^^^^^^^^^^^
 
 There is a `shared repository <typeshed_>`_ where useful stubs are being
 collected.  Policies regarding the stubs collected here are
@@ -6884,7 +6936,7 @@ decided separately and reported in the repo's documentation.
 
 
 Storing and distributing types for library packages
-====================================================
+---------------------------------------------------
 
 There are several motivations and methods of supporting typing in a package.
 This specification recognizes three types of packages that users of typing wish to
@@ -6906,7 +6958,7 @@ and the resolution order for resolving module type information.
 
 
 Packaging Type Information
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to make packaging and distributing type information as simple and
 easy as possible, packaging and distribution is done through existing
@@ -6940,7 +6992,7 @@ and indicate that the package supports typing as described
 above.
 
 Stub-only Packages
-^^^^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 For package maintainers wishing to ship stub files containing all of their
 type information, it is preferred that the ``*.pyi`` stubs are alongside the
@@ -6993,7 +7045,7 @@ laid out as follows::
 .. _mro:
 
 Type Checker Module Resolution Order
-------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following is the order in which type checkers supporting this specification SHOULD
 resolve modules containing type information:
@@ -7031,7 +7083,7 @@ binary, in case it is not in the path.
 
 
 Partial Stub Packages
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Many stub packages will only have part of the type interface for libraries
 completed, especially initially. For the benefit of type checking and code
@@ -7058,7 +7110,7 @@ are considered complete unless a ``py.typed`` with ``partial\n`` is included.
 
 
 The ``typing`` Module
-=====================
+---------------------
 
 To open the usage of static type checking to Python 3.5 as well as older
 versions, a uniform namespace is required.  For this purpose, the
@@ -7246,30 +7298,7 @@ Types related to regular expressions and the ``re`` module:
 * Match and Pattern, types of ``re.match()`` and ``re.compile()``
   results (generic over ``AnyStr``)
 
-Definition of Terms
-===================
-
-This section defines a few terms that may be used elsewhere in the specification.
-
-The definition of "MAY", "MUST", and "SHOULD", and "SHOULD NOT" are
-to be interpreted as described in :rfc:`2119`.
-
-"inline" - the types are part of the runtime code using :pep:`526` and
-:pep:`3107` syntax (the filename ends in ``.py``).
-
-"stubs" - files containing only type information, empty of runtime code
-(the filename ends in ``.pyi``).
-
-"Distributions" are the packaged files which are used to publish and distribute
-a release. (:pep:`426`)
-
-"Module" a file containing Python runtime code or stubbed type information.
-
-"Package" a directory or directories that namespace Python modules.
-(Note the distinction between packages and distributions.  While most
-distributions are named after the one package they install, some
-distributions install multiple packages.)
-
+.. _syntax-alternatives:
 
 Syntax alternatives
 ===================
@@ -7281,8 +7310,6 @@ modern syntax in all examples, but type checkers should generally support
 the older alternatives and treat them as equivalent.
 
 This section lists all of these cases.
-
-.. TODO: add 604 (unions), 646 (Unpack), 695 (type parameters)
 
 Type comments
 -------------
