@@ -130,9 +130,8 @@ forward references).
 Annotations should be kept simple or static analysis tools may not be
 able to interpret the values. For example, dynamically computed types
 are unlikely to be understood.  (This is an
-intentionally somewhat vague requirement, specific inclusions and
-exclusions may be added to future versions of this PEP as warranted by
-the discussion.)
+intentionally somewhat vague requirement; specific inclusions and
+exclusions may be added in the future as warranted by the discussion.)
 
 In addition to the above, the following special constructs defined
 below may be used: ``None``, ``Any``, ``Union``, ``Tuple``,
@@ -315,9 +314,10 @@ arguments of the callback are completely unconstrained in this case
 
 Since using callbacks with keyword arguments is not perceived as a
 common use case, there is currently no support for specifying keyword
-arguments with ``Callable``.  Similarly, there is no support for
+arguments with ``Callable``.  Similarly, ``Callable`` does not support
 specifying callback signatures with a variable number of arguments of a
-specific type.
+specific type. For these use cases, see the section on
+`Callback protocols`_.
 
 Because ``typing.Callable`` does double-duty as a replacement for
 ``collections.abc.Callable``, ``isinstance(x, typing.Callable)`` is
@@ -612,7 +612,7 @@ However, there are some special cases in the static typechecking context:
         class MyGeneric(Generic[T]):
             ...
 
-* A generic class nested in another generic class cannot use same type
+* A generic class nested in another generic class cannot use the same type
   variables. The scope of the type variables of the outer class
   doesn't cover the inner one::
 
@@ -812,7 +812,7 @@ be a subtype of the boundary type. Example::
   longer({1}, {1, 2})  # ok, return type set[int]
   longer([1], {1, 2})  # ok, return type Collection[int]
 
-An upper bound cannot be combined with type constraints (as in used
+An upper bound cannot be combined with type constraints (as used in
 ``AnyStr``, see the example earlier); type constraints cause the
 inferred type to be _exactly_ one of the constraint types, while an
 upper bound just requires that the actual type is a subtype of the
@@ -1004,7 +1004,7 @@ Auto Variance For TypeVar
 
 The existing ``TypeVar`` class constructor accepts keyword parameters named
 ``covariant`` and ``contravariant``. If both of these are ``False``, the
-type variable is assumed to be invariant. We propose to add another keyword
+type variable is assumed to be invariant. PEP 695 adds another keyword
 parameter named ``infer_variance`` indicating that a type checker should use
 inference to determine whether the type variable is invariant, covariant or
 contravariant. A corresponding instance variable ``__infer_variance__`` can be
@@ -1336,10 +1336,10 @@ and considered an error if it appears in other positions::
 The ``Never`` type
 ------------------
 
-Since Python 3.11, the ``typing`` module a primitive ``Never``. This represents
-the bottom type, a type that has no members. Type checkers are expected to treat
-this type as equivalent to ``NoReturn``, but it is explicitly also allowed in
-argument positions.
+Since Python 3.11, the ``typing`` module has a primitive ``Never``. This
+represents the bottom type, a type that has no members. Type checkers are
+expected to treat this type as equivalent to ``NoReturn``, but it is explicitly
+also allowed in argument positions.
 
 
 The type of class objects
@@ -1538,7 +1538,7 @@ but not at runtime.
 Type annotations can be used to annotate class and instance variables
 in class bodies and methods. In particular, the value-less notation ``a: int``
 allows one to annotate instance variables that should be initialized
-in ``__init__`` or ``__new__``. The proposed syntax is as follows::
+in ``__init__`` or ``__new__``. The syntax is as follows::
 
   class BasicStarship:
       captain: str = 'Picard'               # instance variable with default
@@ -1618,7 +1618,7 @@ Protocols
 Terminology
 ^^^^^^^^^^^
 
-We propose to use the term *protocols* for types supporting structural
+The term *protocols* is used for types supporting structural
 subtyping. The reason is that the term *iterator protocol*,
 for example, is widely understood in the community, and coming up with
 a new term for this concept in a statically typed context would just create
@@ -1629,7 +1629,7 @@ two subtly different meanings: the first is the traditional, well-known but
 slightly fuzzy concept of protocols such as iterator; the second is the more
 explicitly defined concept of protocols in statically typed code.
 The distinction is not important most of the time, and in other
-cases we propose to just add a qualifier such as *protocol classes*
+cases we can just add a qualifier such as *protocol classes*
 when referring to the static type concept.
 
 If a class includes a protocol in its MRO, the class is called
@@ -1642,7 +1642,7 @@ still not implement it if a protocol attribute is set to ``None``
 in the subclass, see Python [data-model]_ for details.)
 
 The attributes (variables and methods) of a protocol that are mandatory
-for other class in order to be considered a structural subtype are called
+for another class in order to be considered a structural subtype are called
 protocol members.
 
 
@@ -1672,8 +1672,8 @@ protocol types::
           self.file.close()
           self.lock.release()
 
-Apart from few restrictions explicitly mentioned below, protocol types can
-be used in every context where a normal types can::
+Apart from a few restrictions explicitly mentioned below, protocol types can
+be used in every context where normal types can::
 
   def close_all(things: Iterable[SupportsClose]) -> None:
       for t in things:
@@ -1792,7 +1792,7 @@ subtyping -- the semantics of inheritance is not changed. Examples::
     represent(another) # Also OK
 
 Note that there is little difference between explicit and implicit
-subtypes, the main benefit of explicit subclassing is to get some protocol
+subtypes; the main benefit of explicit subclassing is to get some protocol
 methods "for free". In addition, type checkers can statically verify that
 the class actually implements the protocol correctly::
 
@@ -1812,7 +1812,7 @@ the class actually implements the protocol correctly::
 A class can explicitly inherit from multiple protocols and also from normal
 classes. In this case methods are resolved using normal MRO and a type checker
 verifies that all subtyping are correct. The semantics of ``@abstractmethod``
-is not changed, all of them must be implemented by an explicit subclass
+is not changed; all of them must be implemented by an explicit subclass
 before it can be instantiated.
 
 
@@ -2099,7 +2099,7 @@ Example::
 
 Variables and parameters annotated with ``Type[Proto]`` accept only concrete
 (non-protocol) subtypes of ``Proto``. The main reason for this is to allow
-instantiation of parameters with such type. For example::
+instantiation of parameters with such types. For example::
 
   class Proto(Protocol):
       @abstractmethod
@@ -2257,7 +2257,7 @@ the risks for this feature, the following rules are applied.
 
 **Definitions**:
 
-* *Data, and non-data protocols*: A protocol is called non-data protocol
+* *Data and non-data protocols*: A protocol is called a non-data protocol
   if it only contains methods as members (for example ``Sized``,
   ``Iterator``, etc). A protocol that contains at least one non-method member
   (like ``x: int``) is called a data protocol.
@@ -2432,7 +2432,7 @@ Given some value ``v`` that is a member of type ``T``, the type
 
 All methods from the parent type will be directly inherited by the
 literal type. So, if we have some variable ``foo`` of type ``Literal[3]``
-it’s safe to do things like ``foo + 5`` since ``foo`` inherits int’s
+it’s safe to do things like ``foo + 5`` since ``foo`` inherits ``int``’s
 ``__add__`` method. The resulting type of ``foo + 5`` is ``int``.
 
 This "inheriting" behavior is identical to how we
@@ -2448,7 +2448,7 @@ both of the following conditions are true:
 2. ``v1 == v2``
 
 For example, ``Literal[20]`` and ``Literal[0x14]`` are equivalent.
-However, ``Literal[0]`` and ``Literal[False]`` is *not* equivalent
+However, ``Literal[0]`` and ``Literal[False]`` are *not* equivalent
 despite that ``0 == False`` evaluates to 'true' at runtime: ``0``
 has type ``int`` and ``False`` has type ``bool``.
 
@@ -2593,7 +2593,7 @@ The following parameters are intentionally disallowed by design:
    only types, never over values.
 
 The following are provisionally disallowed for simplicity. We can consider
-allowing them in future extensions of this PEP.
+allowing them in the future.
 
 -  Floats: e.g. ``Literal[3.14]``. Representing Literals of infinity or NaN
    in a clean way is tricky; real-world APIs are unlikely to vary their
@@ -2690,8 +2690,9 @@ explicitly annotated otherwise. A type checker using this strategy would
 always infer that ``x`` is of type ``str`` in the first example above.
 
 This is not the only viable strategy: type checkers should feel free to experiment
-with more sophisticated inference techniques. This PEP does not mandate any
-particular strategy; it only emphasizes the importance of backwards compatibility.
+with more sophisticated inference techniques. No particular strategy is
+mandated, but type checkers should keep in mind the importance of backwards
+compatibility.
 
 Using non-Literals in Literal contexts
 """"""""""""""""""""""""""""""""""""""
@@ -2756,7 +2757,7 @@ We expect similar behavior when using functions like getattr::
    reveal_type(getattr(t, b))  # Revealed type is 'Callable[[int], str]'
    getattr(t, c)               # Error: No attribute named 'blah' in Test
 
-**Note:** See `Interactions with Final`_ for a proposal on how we can
+**Note:** See `Interactions with Final`_ for how we can
 express the variable declarations above in a more compact manner.
 
 Interactions with overloads
@@ -2792,9 +2793,9 @@ For example, code like this would be broken::
    with open(path, mode) as f:
        # f should continue to be of type IO[Any] here
 
-A little more broadly: we propose adding a policy to typeshed that
-mandates that whenever we add literal types to some existing API, we also
-always include a fallback overload to maintain backwards-compatibility.
+A little more broadly: we mandate that whenever we add literal types to
+some existing API in typeshed, we also always include a fallback overload to
+maintain backwards-compatibility.
 
 Interactions with generics
 """"""""""""""""""""""""""
@@ -2836,7 +2837,7 @@ by using ``S = Literal["foo"]`` instead.
 **Note:** Literal types and generics deliberately interact in only very
 basic and limited ways. In particular, libraries that want to type check
 code containing a heavy amount of numeric or numpy-style manipulation will
-almost certainly likely find Literal types as proposed in this PEP to be
+almost certainly likely find Literal types as described here to be
 insufficient for their needs.
 
 Interactions with enums and exhaustiveness checks
@@ -2969,7 +2970,7 @@ string keys, and with specific value types for each valid key.  Each
 string key can be either required (it must be present) or
 non-required (it doesn't need to exist).
 
-This PEP proposes two ways of defining TypedDict types.  The first uses
+There are two ways of defining TypedDict types.  The first uses
 a class-based syntax.  The second is an alternative
 assignment-based syntax that is provided for backwards compatibility,
 to allow the feature to be backported to older Python versions.  The
@@ -2977,11 +2978,11 @@ rationale is similar to why :pep:`484` supports a comment-based
 annotation syntax for Python 2.7: type hinting is particularly useful
 for large existing codebases, and these often need to run on older
 Python versions.  The two syntax options parallel the syntax variants
-supported by ``typing.NamedTuple``.  Other proposed features include
+supported by ``typing.NamedTuple``.  Other features include
 TypedDict inheritance and totality (specifying whether keys are
 required or not).
 
-This PEP also provides a sketch of how a type checker is expected
+This section also provides a sketch of how a type checker is expected
 to support type checking operations involving TypedDict objects.
 Similar to :pep:`484`, this discussion is left somewhat vague on purpose,
 to allow experimentation with a wide variety of different type
@@ -3019,9 +3020,8 @@ TypedDict definition conforms to the following rules:
   it would not be sufficient to support type comments for backwards
   compatibility with Python 2.7, since the class definition may have a
   ``total`` keyword argument, as discussed below, and this isn't valid
-  syntax in Python 2.7.)  Instead, this PEP provides an alternative,
-  assignment-based syntax for backwards compatibility, discussed in
-  `Alternative Syntax`_.
+  syntax in Python 2.7.)  Instead, `Alternative Syntax`_ provides an
+  alternative, assignment-based syntax for backwards compatibility.
 
 * String literal forward references are valid in the value types.
 
@@ -3217,7 +3217,7 @@ a single TypedDict type. Alternatively, ``Required`` and ``NotRequired``
 Alternative Syntax
 ^^^^^^^^^^^^^^^^^^
 
-This PEP also proposes an alternative syntax that can be backported to
+This section provides an alternative syntax that can be backported to
 older Python versions such as 3.5 and 2.7 that don't support the
 variable definition syntax introduced in :pep:`526`.  It
 resembles the traditional syntax for defining named tuples::
@@ -4416,13 +4416,13 @@ for two reasons:
 Variance, Type Constraints and Type Bounds: Not (Yet) Supported
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-To keep this PEP minimal, ``TypeVarTuple`` does not yet support specification of:
+``TypeVarTuple`` does not yet support specification of:
 
 * Variance (e.g. ``TypeVar('T', covariant=True)``)
 * Type constraints (``TypeVar('T', int, float)``)
 * Type bounds (``TypeVar('T', bound=ParentClass)``)
 
-We leave the decision of how these arguments should behave to a future PEP, when variadic generics have been tested in the field. As of this PEP, type variable tuples are
+We leave the decision of how these arguments should behave to a future PEP, when variadic generics have been tested in the field. As of PEP 646, type variable tuples are
 invariant.
 
 Type Variable Tuple Equality
@@ -4462,7 +4462,7 @@ length, and the type parameters themselves must be identical):
 Multiple Type Variable Tuples: Not Allowed
 """"""""""""""""""""""""""""""""""""""""""
 
-As of this PEP, only a single type variable tuple may appear in a type parameter list:
+Only a single type variable tuple may appear in a type parameter list:
 
 ::
 
@@ -5080,11 +5080,11 @@ TypeGuard
 
 (Originally specified in :pep:`647`.)
 
-This PEP introduces the symbol ``TypeGuard`` exported from the ``typing``
-module. ``TypeGuard`` is a special form that accepts a single type argument.
-It is used to annotate the return type of a user-defined type guard function.
-Return statements within a type guard function should return bool values,
-and type checkers should verify that all return paths return a bool.
+The symbol ``TypeGuard``, exported from the ``typing`` module, is a special form
+that accepts a single type argument. It is used to annotate the return type of a
+user-defined type guard function. Return statements within a type guard function
+should return bool values, and type checkers should verify that all return paths
+return a bool.
 
 In all other respects, TypeGuard is a distinct type from bool. It is not a
 subtype of bool. Therefore, ``Callable[..., TypeGuard[int]]`` is not assignable
@@ -5284,7 +5284,7 @@ The current workaround for this is unintuitive and error-prone:
         ) -> Self:
             return cls(config["scale"])
 
-We propose using ``Self`` directly:
+Instead, ``Self`` can be used directly:
 
 ::
 
@@ -5314,7 +5314,7 @@ the current class:
 
         def apply(self: Self, f: Callable[[Self], None]) -> None: ...
 
-We propose using ``Self`` directly to achieve the same behavior:
+``Self`` can be used directly to achieve the same behavior:
 
 ::
 
@@ -5375,7 +5375,7 @@ constructions with subclasses:
         print(xs.next.ordinal_value())  # Runtime Error.
 
 
-We propose expressing this constraint using ``next: Self | None``:
+This constraint can be expressed using ``next: Self | None``:
 
 ::
 
@@ -5722,10 +5722,10 @@ passed in as a parameter. These don’t seem worth the additional complexity.
         def return_parameter(foo: Self) -> Self:  # Rejected
             ...
 
-Likewise, we reject ``Self`` in metaclasses. ``Self`` in this PEP consistently
-refers to the same type (that of ``self``). But in metaclasses, it would have
-to refer to different types in different method signatures. For example, in
-``__mul__``, ``Self`` in the return type would refer to the implementing class
+Likewise, we reject ``Self`` in metaclasses. ``Self`` consistently refers to the
+same type (that of ``self``). But in metaclasses, it would have to refer to
+different types in different method signatures. For example, in ``__mul__``,
+``Self`` in the return type would refer to the implementing class
 ``Foo``, not the enclosing class ``MyMetaclass``. But, in ``__new__``, ``Self``
 in the return type would refer to the enclosing class ``MyMetaclass``. To
 avoid confusion, we reject this edge case.
@@ -5780,7 +5780,7 @@ but we assume that they modify classes in the following ways:
   within the class and its parent classes.
 * They synthesize ``__eq__`` and ``__ne__`` methods.
 
-Type checkers supporting this PEP will recognize that the
+Type checkers will recognize that the
 ``CustomerModel`` class can be instantiated using the synthesized
 ``__init__`` method:
 
@@ -6158,7 +6158,7 @@ For example:
 Dataclass semantics
 ^^^^^^^^^^^^^^^^^^^
 
-Except where stated otherwise in this PEP, classes impacted by
+Except where stated otherwise, classes impacted by
 ``dataclass_transform``, either by inheriting from a class that is
 decorated with ``dataclass_transform`` or by being decorated with
 a function decorated with ``dataclass_transform``, are assumed to
@@ -6640,9 +6640,7 @@ other comments and linting markers:
 
   # type: ignore # <comment or other marker>
 
-If type hinting proves useful in general, a syntax for typing variables
-may be provided in a future Python version. (**UPDATE**: This syntax
-was added in Python 3.6 through :pep:`526`.)
+A syntax for typing variables was added in Python 3.6 through :pep:`526`.
 
 ``cast()``
 ----------
@@ -7382,8 +7380,7 @@ Type comments on function definitions
 -------------------------------------
 
 Some tools may want to support type annotations in code that must be
-compatible with Python 2.7.  For this purpose this PEP has a suggested
-(but not mandatory) extension where function annotations are placed in
+compatible with Python 2.7.  For this purpose function annotations can placed in
 a ``# type:`` comment.  Such a comment must be placed immediately
 following the function header (before the docstring).  An example: the
 following Python 3 code::
