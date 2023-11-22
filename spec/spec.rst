@@ -7380,7 +7380,7 @@ Type comments on function definitions
 -------------------------------------
 
 Some tools may want to support type annotations in code that must be
-compatible with Python 2.7.  For this purpose function annotations can placed in
+compatible with Python 2.7.  For this purpose function annotations can be placed in
 a ``# type:`` comment.  Such a comment must be placed immediately
 following the function header (before the docstring).  An example: the
 following Python 3 code::
