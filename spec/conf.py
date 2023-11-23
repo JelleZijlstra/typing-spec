@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Typing Specification'
+project = 'Draft Typing Specification'
 copyright = '2023, Jelle Zijlstra'
 author = 'Jelle Zijlstra'
 
