@@ -427,8 +427,7 @@ TypeVarTuple
 
 (Originally specified in :pep:`646`.)
 
-In order to support the above use cases, we introduce
-``TypeVarTuple``. This serves as a placeholder not for a single type
+A ``TypeVarTuple`` serves as a placeholder not for a single type
 but for a *tuple* of types.
 
 In addition, we introduce a new use for the star operator: to 'unpack'
