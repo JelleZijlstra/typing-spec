@@ -26,9 +26,7 @@ The meaning of annotations
 --------------------------
 
 Any function without annotations should be treated as having the most
-general type possible, or ignored, by any type checker.  Functions
-with the ``@no_type_check`` decorator should be treated as having
-no annotations.
+general type possible, or ignored, by any type checker.
 
 It is recommended but not required that checked functions have
 annotations for all arguments and the return type.  For a checked
@@ -1487,32 +1485,6 @@ checks, e.g.::
 
 Don't expect a checker to understand obfuscations like
 ``"".join(reversed(sys.platform)) == "xunil"``.
-
-
-``TYPE_CHECKING``
------------------
-
-Sometimes there's code that must be seen by a type checker (or other
-static analysis tools) but should not be executed.  For such
-situations the ``typing`` module defines a constant,
-``TYPE_CHECKING``, that is considered ``True`` during type checking
-(or other static analysis) but ``False`` at runtime.  Example::
-
-  import typing
-
-  if typing.TYPE_CHECKING:
-      import expensive_mod
-
-  def a_func(arg: 'expensive_mod.SomeClass') -> None:
-      a_var: expensive_mod.SomeClass = arg
-      ...
-
-(Note that the type annotation must be enclosed in quotes, making it a
-"forward reference", to hide the ``expensive_mod`` reference from the
-interpreter runtime.  In the variable annotation no quotes are needed.)
-
-This approach may also be useful to handle import cycles.
-
 
 ``ClassVar``
 ------------
@@ -6582,87 +6554,6 @@ to opt into a strict mode where methods that override a parent class are
 required to use the decorator. Strict enforcement should be opt-in for backward
 compatibility.
 
-``assert_type()``
------------------
-
-The function ``typing.assert_type(val, typ)`` allows users to
-ask a static type checker to confirm that *val* has an inferred type of *typ*.
-
-When a type checker encounters a call to ``assert_type()``, it
-should emit an error if the value is not of the specified type::
-
-    def greet(name: str) -> None:
-        assert_type(name, str)  # OK, inferred type of `name` is `str`
-        assert_type(name, int)  # type checker error
-
-``reveal_type()``
------------------
-
-The function ``reveal_type(obj)`` makes type checkers
-reveal the inferred static type of an expression.
-
-When a static type checker encounters a call to this function,
-it should emit a diagnostic with the type of the argument. For example::
-
-  x: int = 1
-  reveal_type(x)  # Revealed type is "builtins.int"
-
-``# type: ignore`` comments
----------------------------
-
-The special comment ``# type: ignore`` is used to silence type checker
-errors.
-
-The ``# type: ignore`` comment should be put on the line that the
-error refers to::
-
-  import http.client
-  errors = {
-      'not_found': http.client.NOT_FOUND  # type: ignore
-  }
-
-A ``# type: ignore`` comment on a line by itself at the top of a file,
-before any docstrings, imports, or other executable code, silences all
-errors in the file. Blank lines and other comments, such as shebang
-lines and coding cookies, may precede the ``# type: ignore`` comment.
-
-In some cases, linting tools or other comments may be needed on the same
-line as a type comment. In these cases, the type comment should be before
-other comments and linting markers:
-
-  # type: ignore # <comment or other marker>
-
-A syntax for typing variables was added in Python 3.6 through :pep:`526`.
-
-``cast()``
-----------
-
-Occasionally the type checker may need a different kind of hint: the
-programmer may know that an expression is of a more constrained type
-than a type checker may be able to infer.  For example::
-
-  from typing import cast
-
-  def find_first_str(a: list[object]) -> str:
-      index = next(i for i, x in enumerate(a) if isinstance(x, str))
-      # We only get here if there's at least one string in a
-      return cast(str, a[index])
-
-Some type checkers may not be able to infer that the type of
-``a[index]`` is ``str`` and only infer ``object`` or ``Any``, but we
-know that (if the code gets to that point) it must be a string.  The
-``cast(t, x)`` call tells the type checker that we are confident that
-the type of ``x`` is ``t``.  At runtime a cast always returns the
-expression unchanged -- it does not check the type, and it does not
-convert or coerce the value.
-
-Casts differ from type comments (see the previous section).  When using
-a type comment, the type checker should still verify that the inferred
-type is consistent with the stated type.  When using a cast, the type
-checker should blindly believe the programmer.  Also, casts can be used
-in expressions, while type comments only apply to assignments.
-
-
 ``NewType``
 -----------
 
@@ -6817,27 +6708,3 @@ types cannot be specified::
           return spam(42)
       else:
           return asyncio.Future(...)
-
-
-Compatibility with other uses of function annotations
------------------------------------------------------
-
-A number of existing or potential use cases for function annotations
-exist, which are incompatible with type hinting.  These may confuse
-a static type checker.  However, since type hinting annotations have no
-runtime behavior (other than evaluation of the annotation expression and
-storing annotations in the ``__annotations__`` attribute of the function
-object), this does not make the program incorrect -- it just may cause
-a type checker to emit spurious warnings or errors.
-
-To mark portions of the program that should not be covered by type
-hinting, you can use one or more of the following:
-
-* a ``# type: ignore`` comment;
-
-* a ``@no_type_check`` decorator on a class or function;
-
-* a custom class or function decorator marked with
-  ``@no_type_check_decorator``.
-
-For more details see earlier sections.
