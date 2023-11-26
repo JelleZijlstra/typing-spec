@@ -15,17 +15,7 @@ refactoring.
 
 This specification is organized in the following main sections:
 
-- :ref:`"Basics of the type system" <basics>` describes some basic concepts of the
-  type system.
-- :ref:`"Type system features" <type-system-features>` describes specific features of the type
-  system.
-- :ref:`"Interaction with Python features" <interaction-with-python>` describes how type checkers
-  should treat certain specific features of the language.
-- :ref:`"Communicating type information" <communicating-type>` describes mechanisms by which
-  information about types is shared among libraries and type
-  checkers.
-- :ref:`"Syntax alternatives" <syntax-alternatives>` describes several features that are expressed
-  with different syntax in older and newer Python versions.
+TODO
 
 .. _basics:
 
@@ -835,7 +825,7 @@ It turns out such an argument acts *contravariantly*, whereas the
 intuitive answer (which is correct in case the function doesn't mutate
 its argument!) requires the argument to act *covariantly*.  A longer
 introduction to these concepts can be found on `Wikipedia
-<wiki-variance_>`_ and in :pep:`483`; here we just show how to control
+<https://en.wikipedia.org/wiki/Covariance_and_contravariance_%28computer_science%29>`_ and in :pep:`483`; here we just show how to control
 a type checker's behavior.
 
 By default generic types declared using the old ``TypeVar`` syntax
@@ -1639,7 +1629,8 @@ with a protocol. If a class is compatible with a protocol but the protocol
 is not included in the MRO, the class is an *implicit* subtype
 of the protocol. (Note that one can explicitly subclass a protocol and
 still not implement it if a protocol attribute is set to ``None``
-in the subclass, see Python [data-model]_ for details.)
+in the subclass, see Python `data model <https://docs.python.org/3/reference/datamodel.html#special-method-names>`_
+for details.)
 
 The attributes (variables and methods) of a protocol that are mandatory
 for another class in order to be considered a structural subtype are called
@@ -3592,8 +3583,8 @@ in any nesting order:
 
 In particular allowing ``Annotated[]`` to be the outermost annotation
 for an item allows better interoperability with non-typing uses of
-annotations, which may always want ``Annotated[]`` as the outermost annotation.
-[3]_
+annotations, which may always want ``Annotated[]`` as the outermost annotation
+(`discussion <https://bugs.python.org/issue46491>`__).
 
 
 The ``final`` decorator
@@ -6236,10 +6227,11 @@ This includes, but is not limited to, the following semantics:
   an ``__init__`` method will not be synthesized for that class.
 
 * KW_ONLY sentinel values are supported as described in `the Python
-  docs <#kw-only-docs_>`_ and `bpo-43532 <#kw-only-issue_>`_.
+  docs <https://docs.python.org/3/library/dataclasses.html#dataclasses.KW_ONLY>`_
+  and `bpo-43532 <https://bugs.python.org/issue43532>`_.
 
 * ClassVar attributes are not considered dataclass fields and are
-  `ignored by dataclass mechanisms <#class-var_>`_.
+  `ignored by dataclass mechanisms <https://docs.python.org/3/library/dataclasses.html#class-variables>`_.
 
 
 Undefined behavior
@@ -6904,7 +6896,7 @@ Additional notes on stub files:
   exported.  (This makes it easier to re-export all objects from a
   given module that may vary by Python version.)
 
-* Just like in `normal Python files <importdocs_>`_, submodules
+* Just like in `normal Python files <https://docs.python.org/3/reference/import.html#submodules>`_, submodules
   automatically become exported attributes of their parent module
   when imported. For example, if the ``spam`` package has the
   following directory structure::
@@ -6928,7 +6920,7 @@ Additional notes on stub files:
 The Typeshed Repo
 ^^^^^^^^^^^^^^^^^
 
-There is a `shared repository <typeshed_>`_ where useful stubs are being
+There is a `shared repository <https://github.com/python/typeshed>`_ where useful stubs are being
 collected.  Policies regarding the stubs collected here are
 decided separately and reported in the repo's documentation.
 
@@ -7105,39 +7097,3 @@ Type checkers should treat namespace packages within stub-packages as
 incomplete since multiple distributions may populate them.
 Regular packages within namespace packages in stub-package distributions
 are considered complete unless a ``py.typed`` with ``partial\n`` is included.
-
-
-.. _mypy:
-   http://mypy-lang.org
-
-.. _gvr-artima:
-   https://www.artima.com/weblogs/viewpost.jsp?thread=85551
-
-.. _wiki-variance:
-   https://en.wikipedia.org/wiki/Covariance_and_contravariance_%28computer_science%29
-
-.. _typeshed:
-   https://github.com/python/typeshed
-
-.. _roberge:
-   https://aroberge.blogspot.com/2015/01/type-hinting-in-python-focus-on.html
-
-.. _github:
-   https://github.com/python/typing
-
-.. _issues:
-   https://github.com/python/typing/issues
-
-.. _peps:
-   https://hg.python.org/peps/file/tip/pep-0484.txt
-
-.. _importdocs:
-   https://docs.python.org/3/reference/import.html#submodules
-
-.. [data-model]
-   https://docs.python.org/3/reference/datamodel.html#special-method-names
-
-.. [3] https://bugs.python.org/issue46491
-.. _#kw-only-docs: https://docs.python.org/3/library/dataclasses.html#dataclasses.KW_ONLY
-.. _#kw-only-issue: https://bugs.python.org/issue43532
-.. _#class-var: https://docs.python.org/3/library/dataclasses.html#class-variables

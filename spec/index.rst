@@ -11,6 +11,8 @@ Welcome to Typing Specification's documentation!
    :caption: Contents:
 
    spec
+   python-features
+   historical
 
 
 
