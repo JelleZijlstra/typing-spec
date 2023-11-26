@@ -112,3 +112,24 @@ To mark portions of the program that should not be covered by type
 hinting, you can use the ``@typing.no_type_check`` decorator on a class or function.
 Functions with this decorator should be treated as having
 no annotations.
+
+Version and platform checking
+-----------------------------
+
+Type checkers are expected to understand simple version and platform
+checks, e.g.::
+
+  import sys
+
+  if sys.version_info[0] >= 3:
+      # Python 3 specific definitions
+  else:
+      # Python 2 specific definitions
+
+  if sys.platform == 'win32':
+      # Windows specific definitions
+  else:
+      # Posix specific definitions
+
+Don't expect a checker to understand obfuscations like
+``"".join(reversed(sys.platform)) == "xunil"``.
