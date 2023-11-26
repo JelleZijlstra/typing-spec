@@ -75,20 +75,6 @@ that can't easily be expressed using a union or a type variable::
   def utf8(value):
       <actual implementation>
 
-NOTE: While it would be possible to provide a multiple dispatch
-implementation using this syntax, its implementation would require
-using ``sys._getframe()``, which is frowned upon.  Also, designing and
-implementing an efficient multiple dispatch mechanism is hard, which
-is why previous attempts were abandoned in favor of
-``functools.singledispatch()``.  (See :pep:`443`, especially its section
-"Alternative approaches".)  In the future we may come up with a
-satisfactory multiple dispatch design, but we don't want such a design
-to be constrained by the overloading syntax defined for type hints in
-stub files.  It is also possible that both features will develop
-independent from each other (since overloading in the type checker
-has different use cases and requirements than multiple dispatch
-at runtime -- e.g. the latter is unlikely to support generic types).
-
 A constrained ``TypeVar`` type can often be used instead of using the
 ``@overload`` decorator.  For example, the definitions of ``concat1``
 and ``concat2`` in this stub file are equivalent::
