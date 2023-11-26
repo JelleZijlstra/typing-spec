@@ -371,8 +371,3 @@ arguments with ``Callable``.  Similarly, ``Callable`` does not support
 specifying callback signatures with a variable number of arguments of a
 specific type. For these use cases, see the section on
 `Callback protocols`_.
-
-Because ``typing.Callable`` does double-duty as a replacement for
-``collections.abc.Callable``, ``isinstance(x, typing.Callable)`` is
-implemented by deferring to ``isinstance(x, collections.abc.Callable)``.
-However, ``isinstance(x, typing.Callable[...])`` is not supported.
