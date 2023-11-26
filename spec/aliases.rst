@@ -75,7 +75,7 @@ Implicit syntax (pre-existing):
   x: int = 1  # typed global expression
 
   x = int  # type alias
-  x: Type[int] = int  # typed global expression
+  x: type[int] = int  # typed global expression
 
 
 Explicit syntax:
@@ -86,7 +86,7 @@ Explicit syntax:
   x: int = 1  # typed global expression
 
   x = int  # untyped global expression (see note below)
-  x: Type[int] = int  # typed global expression
+  x: type[int] = int  # typed global expression
 
   x: TypeAlias = int  # type alias
   x: TypeAlias = "MyClass"  # type alias

@@ -228,13 +228,13 @@ type variable, thus making that method a generic function. For example::
   c = C()
   c2 = c.copy()  # type here should be C
 
-The same applies to class methods using ``Type[]`` in an annotation
+The same applies to class methods using ``type[]`` in an annotation
 of the first argument::
 
   T = TypeVar('T', bound='C')
   class C:
       @classmethod
-      def factory(cls: Type[T]) -> T:
+      def factory(cls: type[T]) -> T:
           # make a new instance of cls
 
   class D(C): ...
