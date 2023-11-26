@@ -1,5 +1,5 @@
 The Python Type System
-====================
+======================
 
 This document describes a specification for the Python type system.
 

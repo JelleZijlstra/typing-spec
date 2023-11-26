@@ -371,3 +371,28 @@ arguments with ``Callable``.  Similarly, ``Callable`` does not support
 specifying callback signatures with a variable number of arguments of a
 specific type. For these use cases, see the section on
 `Callback protocols`_.
+
+Callback protocols
+------------------
+
+Protocols can be used to define flexible callback types that are hard
+(or even impossible) to express using the ``Callable[...]`` syntax
+specified by :pep:`484`, such as variadic, overloaded, and complex generic
+callbacks. They can be defined as protocols with a ``__call__`` member::
+
+  from typing import Protocol
+
+  class Combiner(Protocol):
+      def __call__(self, *vals: bytes,
+                   maxlen: int | None = None) -> list[bytes]: ...
+
+  def good_cb(*vals: bytes, maxlen: int | None = None) -> list[bytes]:
+      ...
+  def bad_cb(*vals: bytes, maxitems: int | None) -> list[bytes]:
+      ...
+
+  comb: Combiner = good_cb  # OK
+  comb = bad_cb  # Error! Argument 2 has incompatible type because of
+                 # different name and kind in the callback
+
+Callback protocols and ``Callable[...]`` types can be used interchangeably.

@@ -49,6 +49,8 @@ Type checkers are expected to attempt to infer as much information as
 necessary.  The minimum requirement is to handle the builtin
 decorators ``@property``, ``@staticmethod`` and ``@classmethod``.
 
+.. _valid-types:
+
 Valid type expression forms
 ---------------------------
 
@@ -110,8 +112,7 @@ same namespaces in which default arguments to the same function would
 be evaluated.
 
 Moreover, the expression should be parseable as a valid type hint, i.e.,
-it is constrained by the rules from the section `Acceptable type hints`_
-above.
+it is constrained by the rules from the section on :ref:`valid-types`.
 
 It is allowable to use string literals as *part* of a type hint, for
 example::
