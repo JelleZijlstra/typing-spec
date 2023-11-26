@@ -311,7 +311,7 @@ be cast to Literal. For example::
 
 **Note:** If the user wants their API to support accepting both literals
 *and* the original type -- perhaps for legacy purposes -- they should
-implement a fallback overload. See `Interactions with overloads`_.
+implement a fallback overload. See :ref:`literalstring-overloads`.
 
 Interactions with other types and features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -552,3 +552,267 @@ example, whether or not the following program type checks is left unspecified::
     # Note: "Literal[1 + 2]" is not a legal type.
     bar2: Final = 1 + 2
     expects_three(bar2)  # May or may not be accepted by type checkers
+
+``LiteralString``
+-----------------
+
+(Originally specified in :pep:`675`.)
+
+Valid locations for ``LiteralString``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``LiteralString`` can be used where any other type can be used:
+
+::
+
+    variable_annotation: LiteralString
+
+    def my_function(literal_string: LiteralString) -> LiteralString: ...
+
+    class Foo:
+        my_attribute: LiteralString
+
+    type_argument: List[LiteralString]
+
+    T = TypeVar("T", bound=LiteralString)
+
+It cannot be nested within unions of ``Literal`` types:
+
+::
+
+    bad_union: Literal["hello", LiteralString]  # Not OK
+    bad_nesting: Literal[LiteralString]  # Not OK
+
+
+Type inference
+^^^^^^^^^^^^^^
+
+Inferring ``LiteralString``
+"""""""""""""""""""""""""""
+
+Any literal string type is compatible with ``LiteralString``. For
+example, ``x: LiteralString = "foo"`` is valid because ``"foo"`` is
+inferred to be of type ``Literal["foo"]``.
+
+We also infer ``LiteralString`` in the
+following cases:
+
++ Addition: ``x + y`` is of type ``LiteralString`` if both ``x`` and
+  ``y`` are compatible with ``LiteralString``.
+
++ Joining: ``sep.join(xs)`` is of type ``LiteralString`` if ``sep``'s
+  type is compatible with ``LiteralString`` and ``xs``'s type is
+  compatible with ``Iterable[LiteralString]``.
+
++ In-place addition: If ``s`` has type ``LiteralString`` and ``x`` has
+  type compatible with ``LiteralString``, then ``s += x`` preserves
+  ``s``'s type as ``LiteralString``.
+
++ String formatting: An f-string has type ``LiteralString`` if and only
+  if its constituent expressions are literal strings. ``s.format(...)``
+  has type ``LiteralString`` if and only if ``s`` and the arguments have
+  types compatible with ``LiteralString``.
+
+In all other cases, if one or more of the composed values has a
+non-literal type ``str``, the composition of types will have type
+``str``. For example, if ``s`` has type ``str``, then ``"hello" + s``
+has type ``str``. This matches the pre-existing behavior of type
+checkers.
+
+``LiteralString`` is compatible with the type ``str``. It inherits all
+methods from ``str``. So, if we have a variable ``s`` of type
+``LiteralString``, it is safe to write ``s.startswith("hello")``.
+
+Some type checkers refine the type of a string when doing an equality
+check:
+
+::
+
+    def foo(s: str) -> None:
+        if s == "bar":
+            reveal_type(s)  # => Literal["bar"]
+
+Such a refined type in the if-block is also compatible with
+``LiteralString`` because its type is ``Literal["bar"]``.
+
+
+Examples
+""""""""
+
+See the examples below to help clarify the above rules:
+
+::
+
+
+    literal_string: LiteralString
+    s: str = literal_string  # OK
+
+    literal_string: LiteralString = s  # Error: Expected LiteralString, got str.
+    literal_string: LiteralString = "hello"  # OK
+
+Addition of literal strings:
+
+::
+
+    def expect_literal_string(s: LiteralString) -> None: ...
+
+    expect_literal_string("foo" + "bar")  # OK
+    expect_literal_string(literal_string + "bar")  # OK
+
+    literal_string2: LiteralString
+    expect_literal_string(literal_string + literal_string2)  # OK
+
+    plain_string: str
+    expect_literal_string(literal_string + plain_string)  # Not OK.
+
+Join using literal strings:
+
+::
+
+    expect_literal_string(",".join(["foo", "bar"]))  # OK
+    expect_literal_string(literal_string.join(["foo", "bar"]))  # OK
+    expect_literal_string(literal_string.join([literal_string, literal_string2]))  # OK
+
+    xs: List[LiteralString]
+    expect_literal_string(literal_string.join(xs)) # OK
+    expect_literal_string(plain_string.join([literal_string, literal_string2]))
+    # Not OK because the separator has type 'str'.
+
+In-place addition using literal strings:
+
+::
+
+    literal_string += "foo"  # OK
+    literal_string += literal_string2  # OK
+    literal_string += plain_string # Not OK
+
+Format strings using literal strings:
+
+::
+
+    literal_name: LiteralString
+    expect_literal_string(f"hello {literal_name}")
+    # OK because it is composed from literal strings.
+
+    expect_literal_string("hello {}".format(literal_name))  # OK
+
+    expect_literal_string(f"hello")  # OK
+
+    username: str
+    expect_literal_string(f"hello {username}")
+    # NOT OK. The format-string is constructed from 'username',
+    # which has type 'str'.
+
+    expect_literal_string("hello {}".format(username))  # Not OK
+
+Other literal types, such as literal integers, are not compatible with ``LiteralString``:
+
+::
+
+    some_int: int
+    expect_literal_string(some_int)  # Error: Expected LiteralString, got int.
+
+    literal_one: Literal[1] = 1
+    expect_literal_string(literal_one)  # Error: Expected LiteralString, got Literal[1].
+
+
+We can call functions on literal strings:
+
+::
+
+    def add_limit(query: LiteralString) -> LiteralString:
+        return query + " LIMIT = 1"
+
+    def my_query(query: LiteralString, user_id: str) -> None:
+        sql_connection().execute(add_limit(query), (user_id,))  # OK
+
+Conditional statements and expressions work as expected:
+
+::
+
+    def return_literal_string() -> LiteralString:
+        return "foo" if condition1() else "bar"  # OK
+
+    def return_literal_str2(literal_string: LiteralString) -> LiteralString:
+        return "foo" if condition1() else literal_string  # OK
+
+    def return_literal_str3() -> LiteralString:
+        if condition1():
+            result: Literal["foo"] = "foo"
+        else:
+            result: LiteralString = "bar"
+
+        return result  # OK
+
+
+Interaction with TypeVars and Generics
+""""""""""""""""""""""""""""""""""""""
+
+TypeVars can be bound to ``LiteralString``:
+
+::
+
+    from typing import Literal, LiteralString, TypeVar
+
+    TLiteral = TypeVar("TLiteral", bound=LiteralString)
+
+    def literal_identity(s: TLiteral) -> TLiteral:
+        return s
+
+    hello: Literal["hello"] = "hello"
+    y = literal_identity(hello)
+    reveal_type(y)  # => Literal["hello"]
+
+    s: LiteralString
+    y2 = literal_identity(s)
+    reveal_type(y2)  # => LiteralString
+
+    s_error: str
+    literal_identity(s_error)
+    # Error: Expected TLiteral (bound to LiteralString), got str.
+
+
+``LiteralString`` can be used as a type argument for generic classes:
+
+::
+
+    class Container(Generic[T]):
+        def __init__(self, value: T) -> None:
+            self.value = value
+
+    literal_string: LiteralString = "hello"
+    x: Container[LiteralString] = Container(literal_string)  # OK
+
+    s: str
+    x_error: Container[LiteralString] = Container(s)  # Not OK
+
+Standard containers like ``List`` work as expected:
+
+::
+
+    xs: List[LiteralString] = ["foo", "bar", "baz"]
+
+
+.. _literalstring-overloads:
+
+Interactions with Overloads
+"""""""""""""""""""""""""""
+
+Literal strings and overloads do not need to interact in a special
+way: the existing rules work fine. ``LiteralString`` can be used as a
+fallback overload where a specific ``Literal["foo"]`` type does not
+match:
+
+::
+
+    @overload
+    def foo(x: Literal["foo"]) -> int: ...
+    @overload
+    def foo(x: LiteralString) -> bool: ...
+    @overload
+    def foo(x: str) -> str: ...
+
+    x1: int = foo("foo")  # First overload.
+    x2: bool = foo("bar")  # Second overload.
+    s: str
+    x3: str = foo(s)  # Third overload.
