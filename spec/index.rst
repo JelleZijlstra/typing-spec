@@ -11,6 +11,9 @@ Welcome to Typing Specification's documentation!
    :caption: Contents:
 
    spec
+   narrowing
+   directives
+   distributing
    python-features
    historical
 
