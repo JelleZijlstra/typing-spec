@@ -11,6 +11,7 @@ Welcome to Typing Specification's documentation!
    :caption: Contents:
 
    spec
+   callables
    narrowing
    directives
    distributing
