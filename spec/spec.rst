@@ -2182,9 +2182,6 @@ of the corresponding protocol methods is dropped. For example::
 
   rp: Reporter = callbacks  # Passes type check
 
-
-.. _discussion:
-
 ``@runtime_checkable`` decorator and narrowing types by ``isinstance()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
