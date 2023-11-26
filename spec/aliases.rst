@@ -1,6 +1,131 @@
 Type aliases
 ============
 
+(See :pep:`613` for the introduction of ``TypeAlias``, and
+:pep:`695` for the ``type`` statement.)
+
+Type aliases may be defined by simple variable assignments::
+
+  Url = str
+
+  def retry(url: Url, retry_count: int) -> None: ...
+
+Or by using ``typing.TypeAlias``::
+
+  from typing import TypeAlias
+
+  Url: TypeAlias = str
+
+  def retry(url: Url, retry_count: int) -> None: ...
+
+Or by using the ``type`` statement (Python 3.12 and higher)::
+
+  type Url = str
+
+  def retry(url: Url, retry_count: int) -> None: ...
+
+Note that we recommend capitalizing alias names, since they represent
+user-defined types, which (like user-defined classes) are typically
+spelled that way.
+
+Type aliases may be as complex as type hints in annotations --
+anything that is acceptable as a type hint is acceptable in a type
+alias::
+
+    from typing import TypeVar
+    from collections.abc import Iterable
+
+    T = TypeVar('T', int, float, complex)
+    Vector = Iterable[tuple[T, T]]
+
+    def inproduct(v: Vector[T]) -> T:
+        return sum(x*y for x, y in v)
+    def dilate(v: Vector[T], scale: T) -> Vector[T]:
+        return ((x * scale, y * scale) for x, y in v)
+    vec: Vector[float] = []
+
+
+This is equivalent to::
+
+    from typing import TypeVar
+    from collections.abc import Iterable
+
+    T = TypeVar('T', int, float, complex)
+
+    def inproduct(v: Iterable[tuple[T, T]]) -> T:
+        return sum(x*y for x, y in v)
+    def dilate(v: Iterable[tuple[T, T]], scale: T) -> Iterable[tuple[T, T]]:
+        return ((x * scale, y * scale) for x, y in v)
+    vec: Iterable[tuple[float, float]] = []
+
+``TypeAlias``
+-------------
+
+The explicit alias declaration syntax with ``TypeAlias`` clearly differentiates between the three
+possible kinds of assignments: typed global expressions, untyped global
+expressions, and type aliases. This avoids the existence of assignments that
+break type checking when an annotation is added, and avoids classifying the
+nature of the assignment based on the type of the value.
+
+Implicit syntax (pre-existing):
+
+::
+
+  x = 1  # untyped global expression
+  x: int = 1  # typed global expression
+
+  x = int  # type alias
+  x: Type[int] = int  # typed global expression
+
+
+Explicit syntax:
+
+::
+
+  x = 1  # untyped global expression
+  x: int = 1  # typed global expression
+
+  x = int  # untyped global expression (see note below)
+  x: Type[int] = int  # typed global expression
+
+  x: TypeAlias = int  # type alias
+  x: TypeAlias = "MyClass"  # type alias
+
+
+Note: The examples above illustrate implicit and explicit alias declarations in
+isolation. For the sake of backwards compatibility, type checkers should support
+both simultaneously, meaning an untyped global expression ``x = int`` will
+still be considered a valid type alias.
+
+``type`` statement
+------------------
+
+Type aliases may also be defined using the ``type`` statement (Python 3.12 and
+higher).
+
+The ``type`` statement allows the creation of explicitly generic
+type aliases::
+
+  type ListOrSet[T] = list[T] | set[T]
+
+Type parameters declared as part of a generic type alias are valid only
+when evaluating the right-hand side of the type alias.
+
+As with ``typing.TypeAlias``, type checkers should restrict the right-hand
+expression to expression forms that are allowed within type annotations.
+The use of more complex expression forms (call expressions, ternary operators,
+arithmetic operators, comparison operators, etc.) should be flagged as an
+error.
+
+Type alias expressions are not allowed to use traditional type variables (i.e.
+those allocated with an explicit ``TypeVar`` constructor call). Type checkers
+should generate an error in this case.
+
+::
+
+    T = TypeVar("T")
+    type MyList = list[T]  # Type checker error: traditional type variable usage
+
 ``NewType``
 -----------
 

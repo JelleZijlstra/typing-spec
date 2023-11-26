@@ -45,6 +45,12 @@ to ``tuple[Any, ...]``. As well, a bare
 avoiding type checker errors with classes that can duck type anywhere or
 are highly dynamic.
 
+``None``
+--------
+
+When used in a type hint, the expression ``None`` is considered
+equivalent to ``type(None)``.
+
 ``NoReturn``
 ------------
 
@@ -91,7 +97,6 @@ and considered an error if it appears in other positions::
   def bad3() -> list[NoReturn]:
       ...
 
-
 ``Never``
 ---------
 
@@ -100,6 +105,25 @@ represents the bottom type, a type that has no members. Type checkers are
 expected to treat this type as equivalent to ``NoReturn``, but it is explicitly
 also allowed in argument positions.
 
+Tuples
+------
+
+The type of a tuple can be expressed by listing the element
+types: ``tuple[int, int, str]`` is a tuple containing an int,
+another int, and a str.  The empty tuple can be typed as
+``tuple[()]``.  Arbitrary-length homogeneous tuples can be
+expressed using one type and ellipsis, for example ``tuple[int, ...]``.
+
+Special cases for ``float`` and ``complex``
+-------------------------------------------
+
+Python's numeric types ``complex``, ``float`` and ``int`` are not
+subtypes of each other, but to support common use cases, the type
+system contains a straightforward shortcut:
+when an argument is annotated as having
+type ``float``, an argument of type ``int`` is acceptable; similar,
+for an argument annotated as having type ``complex``, arguments of
+type ``float`` or ``int`` are acceptable.
 
 ``type[]``
 ----------

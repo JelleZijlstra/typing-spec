@@ -128,14 +128,3 @@ We believe that ``@override`` is most useful if checkers also allow developers
 to opt into a strict mode where methods that override a parent class are
 required to use the decorator. Strict enforcement should be opt-in for backward
 compatibility.
-
-Special cases for subtyping
----------------------------
-
-Python's numeric types ``complex``, ``float`` and ``int`` are not
-subtypes of each other, but to support common use cases, the type
-system contains a straightforward shortcut:
-when an argument is annotated as having
-type ``float``, an argument of type ``int`` is acceptable; similar,
-for an argument annotated as having type ``complex``, arguments of
-type ``float`` or ``int`` are acceptable.
