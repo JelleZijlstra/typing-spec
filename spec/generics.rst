@@ -646,7 +646,7 @@ places where a type is expected
 
    def foo(x: P) -> P: ...                           # Rejected
    def foo(x: Concatenate[int, P]) -> int: ...       # Rejected
-   def foo(x: typing.List[P]) -> None: ...           # Rejected
+   def foo(x: list[P]) -> None: ...           # Rejected
    def foo(x: Callable[[int, str], P]) -> None: ...  # Rejected
 
 
