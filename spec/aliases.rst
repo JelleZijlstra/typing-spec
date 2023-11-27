@@ -35,7 +35,7 @@ alias::
     from typing import TypeVar
     from collections.abc import Iterable
 
-    T = TypeVar('T', int, float, complex)
+    T = TypeVar('T', bound=float)
     Vector = Iterable[tuple[T, T]]
 
     def inproduct(v: Vector[T]) -> T:
@@ -50,7 +50,7 @@ This is equivalent to::
     from typing import TypeVar
     from collections.abc import Iterable
 
-    T = TypeVar('T', int, float, complex)
+    T = TypeVar('T', bound=float)
 
     def inproduct(v: Iterable[tuple[T, T]]) -> T:
         return sum(x*y for x, y in v)
