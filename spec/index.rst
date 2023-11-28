@@ -10,13 +10,21 @@ Welcome to Typing Specification's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   spec
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   type-system
+   concepts
+   annotations
+   special-types
+   generics
+   qualifiers
+   class-compat
+   aliases
+   literal
+   protocol
+   callables
+   overload
+   dataclasses
+   typeddict
+   narrowing
+   directives
+   distributing
+   historical
