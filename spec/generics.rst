@@ -736,8 +736,10 @@ but is not obligated to do so.
    def y_x(y: int, x: str) -> int: ...
 
    foo(x_y, x_y)  # Should return (x: int, y: str) -> bool
+                  # (a callable with two positional-or-keyword parameters)
 
-   foo(x_y, y_x)  # Could return (__a: int, __b: str) -> bool
+   foo(x_y, y_x)  # Could return (a: int, b: str, /) -> bool
+                  # (a callable with two positional-only parameters)
                   # This works because both callables have types that are
                   # behavioral subtypes of Callable[[int, str], int]
 
@@ -777,7 +779,7 @@ transform a finite number of parameters of a callable.
 
    def add(x: Callable[P, int]) -> Callable[Concatenate[str, P], bool]: ...
 
-   add(bar)       # Should return (__a: str, x: int, *args: bool) -> bool
+   add(bar)       # Should return (a: str, /, x: int, *args: bool) -> bool
 
    def remove(x: Callable[Concatenate[int, P], int]) -> Callable[P, bool]: ...
 
@@ -787,7 +789,7 @@ transform a finite number of parameters of a callable.
      x: Callable[Concatenate[int, P], int]
    ) -> Callable[Concatenate[str, P], bool]: ...
 
-   transform(bar) # Should return (__a: str, *args: bool) -> bool
+   transform(bar) # Should return (a: str, /, *args: bool) -> bool
 
 This also means that while any function that returns an ``R`` can satisfy
 ``typing.Callable[P, R]``, only functions that can be called positionally in
