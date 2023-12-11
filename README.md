@@ -1,3 +1,7 @@
+This is a historical repository that was used to create the spec
+that is now available at https://typing.readthedocs.io/en/latest/spec/index.html.
+This repo will be archived.
+
 # Typing Specification
 
 This is a draft specification for the Python type system. It accompanies
